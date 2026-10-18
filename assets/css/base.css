@@ -1,0 +1,411 @@
+/* Общие части всех страниц: основа, шкала текста, кнопки, шапка, меню, панель аренды, поля формы, подвал.
+   Значения — из tokens.css. Размеры макета 1920 — через N × var(--k) (TZ-VERSTKA.md, 2.4). */
+
+/* ---------- Основа ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; scroll-padding-top: var(--header-h); }
+body { margin: 0; min-width: 320px; background: var(--surface); color: var(--muted); font-family: var(--font-text); font-size: max(16px, calc(18 * var(--u))); line-height: 1.5556; container-type: inline-size; overflow-x: clip; -webkit-font-smoothing: antialiased; }
+img, video, svg { display: block; max-width: 100%; }
+img, video { height: auto; }
+[hidden] { display: none !important; }
+button, input, textarea, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+a { color: inherit; }
+h1, h2, h3, p { margin: 0; }
+:focus-visible { outline: 2px solid var(--accent-press); outline-offset: 3px; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+/* Пока открыто меню или панель аренды, страница стоит */
+html.is-locked, html.is-locked body { overflow: hidden; }
+/* Lenis (прокрутка с инерцией): обязательные правила библиотеки */
+html.lenis, html.lenis body { height: auto; }
+.lenis:not(.lenis-autoToggle).lenis-stopped { overflow: clip; }
+.lenis [data-lenis-prevent] { overscroll-behavior: contain; }
+
+/* ---------- Шкала текста (ТЗ 2.3) ----------
+   Buyan пишется обычным регистром — шрифт сам рисует прописные. Минимумы — для окон уже 1280. */
+.t-h1, .t-h2, .t-value, .t-arc { font-family: var(--font-display); font-weight: 400; color: var(--ink); }   /* на компьютере переносы — как в макете (без balance) */
+.t-h1 { font-size: max(48px, calc(72 * var(--k))); line-height: 1.1111; }
+.t-h2 { font-size: max(40px, calc(60 * var(--k))); line-height: 1.2; }
+.t-value { font-size: max(32px, calc(40 * var(--k))); line-height: 1.2; text-wrap: nowrap; }   /* минимум = кегль планшета: шкала не растёт к узким */
+.t-body { font-size: max(16px, calc(18 * var(--k))); line-height: 1.5556; font-weight: 400; }
+.t-button { font-size: max(16px, calc(18 * var(--k))); line-height: 1.5556; font-weight: 500; }
+.t-question { font-size: max(20px, calc(24 * var(--k))); line-height: 1.3333; font-weight: 500; }
+.t-caption { font-size: max(13px, calc(14 * var(--k))); line-height: 1.4286; font-weight: 400; }
+/* Вступление Buyan 40/48 с отступом первой строки 150 («О нас», «Форматы») */
+.t-intro { font-family: var(--font-display); font-weight: 400; font-size: max(32px, calc(40 * var(--k))); line-height: 1.2; text-indent: calc(150 * var(--k)); color: var(--ink); }
+/* Верхний индекс «м²» в Buyan: в шрифте нет знака ², в макете — цифра 2 верхним индексом */
+.sup { font-size: .5em; line-height: 0; vertical-align: .9em; }
+
+@media (max-width: 1023.98px) {
+  .t-h1, .t-h2 { text-wrap: balance; }
+  .t-h1 { font-size: 48px; line-height: 52px; }
+  .t-h2 { font-size: 40px; line-height: 48px; }
+  .t-value { font-size: 32px; line-height: 40px; }
+  .t-body, .t-button { font-size: 16px; line-height: 24px; }
+  .t-question { font-size: 20px; line-height: 28px; }
+  .t-caption { font-size: 13px; line-height: 18px; }
+  .t-intro { font-size: 32px; line-height: 40px; text-indent: 96px; }
+}
+@media (max-width: 767.98px) {
+  .t-h1 { font-size: 36px; line-height: 40px; }
+  .t-h2 { font-size: 32px; line-height: 36px; }
+  .t-value { font-size: 28px; line-height: 32px; }
+  .t-question { font-size: 18px; line-height: 24px; }
+  .t-intro { font-size: 28px; line-height: 32px; text-indent: 48px; }
+}
+/* 320–389: связки «мы перезвоним в течение дня» (324 px при 32) шире окна 320 — заголовки блоков 28/32 */
+@media (max-width: 389.98px) {
+  .t-h2 { font-size: 28px; line-height: 32px; }
+}
+
+/* ---------- Кнопка (Form / Button 610:293) ----------
+   Наведение: заливка фона — как у drone.riotters.com, слева направо за 0,8 с (правило .btn::before ниже, L100; было 0,5 — правка владельца 2026-10-15 «смена фона очень быстрая»);
+   подпись — как у ERA (кнопки hover-btn + hover-nav-item, правка владельца 2026-10-15: «анимация дёрганая, резкая»), 0,8 с:
+   буквы подписи по одной уходят вверх, на их место снизу поднимаются буквы второй копии — волна слева направо за 0,2 с,
+   кривая Ease (.25, .1, .25, 1). Буквы делит btn.js; без него подпись перекатывается целиком, за те же 0,8 с. */
+.btn { position: relative; isolation: isolate; overflow: hidden; display: inline-flex; align-items: center; justify-content: center; height: max(56px, calc(68 * var(--k))); padding: 0 calc(40 * var(--k)); border: 0; background: var(--accent); color: var(--muted); font-family: var(--font-text); font-weight: 500; font-size: max(16px, calc(18 * var(--k))); line-height: 1.5556; text-decoration: none; white-space: nowrap; transition: color var(--dur-m) var(--ease-in-out); }
+/* Заливка фона — как у drone.riotters.com («Contact Us», правка владельца 2026-10-15, L100; разбор — REFERENCES.md):
+   слой цвета наведения на всю кнопку сжат по ширине у правого края; при наведении начало переходит к левому краю
+   и слой растягивается слева направо за 0,8 с (как перекат подписи), кривая (0, 0, .2, 1); при уходе курсора сжимается к правому краю. */
+.btn::before { content: ""; position: absolute; z-index: -1; inset: 0; background: var(--accent-hover); pointer-events: none; transform: scaleX(0); transform-origin: 100% 50%; transition: transform var(--dur-m) cubic-bezier(0, 0, .2, 1); }
+.btn__label { position: relative; display: block; overflow: hidden; }
+.btn__label > span { display: block; }
+.btn__label > span + span { position: absolute; left: 0; right: 0; top: 0; }
+.btn__label:not(.is-split) > span { transition: transform var(--dur-m) var(--ease); }
+.btn__label:not(.is-split) > span + span { transform: translateY(100%); }
+.btn__w { display: inline-block; white-space: nowrap; }
+.btn__c { display: inline-block; transition: transform var(--dur-m) var(--ease), opacity var(--dur-m) var(--ease); transition-delay: var(--d, 0s); }
+.btn__label.is-split > span + span .btn__c { transform: translateY(100%); opacity: 0; }
+.btn:active { background: var(--accent-press); color: var(--ink); }
+.btn:active::before { background: var(--accent-press); }
+.btn:disabled, .btn[aria-disabled="true"] { background: var(--page); color: var(--light-soft); cursor: not-allowed; }
+.btn:disabled::before, .btn[aria-disabled="true"]::before { display: none; }
+.btn--outline { background: transparent; color: var(--light); box-shadow: inset 0 0 0 1px var(--light); }
+.btn--outline::before { background: var(--light); }
+.btn--block { display: flex; width: 100%; }
+@media (hover: hover) {
+  .btn:hover:not(:disabled) { color: var(--ink); }
+  .btn:hover:not(:disabled)::before { transform: scaleX(1); transform-origin: 0 50%; }
+  .btn:hover:not(:disabled) .btn__label:not(.is-split) > span { transform: translateY(-100%); }
+  .btn:hover:not(:disabled) .btn__label:not(.is-split) > span + span { transform: none; }
+  .btn:hover:not(:disabled) .btn__label.is-split > span:first-child .btn__c { transform: translateY(-100%); opacity: 0; }
+  .btn:hover:not(:disabled) .btn__label.is-split > span + span .btn__c { transform: none; opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn, .btn::before, .btn__label > span, .btn__c { transition: none !important; }
+}
+@media (max-width: 1023.98px) { .btn { height: 56px; padding: 0 32px; } }
+
+/* ---------- Значки мессенджеров (basil, как в макете) ---------- */
+.msg { display: inline-grid; place-items: center; flex: none; width: calc(32 * var(--k)); height: calc(32 * var(--k)); color: inherit; transition: color var(--dur-s) var(--ease-out), opacity var(--dur-s) var(--ease-out); }
+.msg svg { width: 100%; height: 100%; }
+/* Наведение — #8FB1D4 и у светлых, и у тёмных значков (правка владельца в макете 962:719, 2026-10-15) */
+@media (hover: hover) { .msg:hover { color: var(--accent-press); } }
+
+/* ---------- Логотип: лок-ап клиента из трёх частей ----------
+   Две краски (светлая над фото, тёмная над светлым фоном) — смена за 0,4 с.
+   Наведение (задание 1 ТЗ; правка владельца 2026-10-16 «анимация текста как и на других текстах», ведёт arka-123-ab):
+   «АРКА 123» и слоган — буквами (header.js, ARKA.logoText), как подписи кнопок: буква уходит вверх на высоту своей строки
+   и гаснет, на её место снизу поднимается такая же — волна слева направо за 0,2 с, 0,8 с, кривая Ease. Текст не пропадает
+   (прежнее наведение гасило части целиком — снято 2026-10-16, L116). Знак-арка стоит. Только мышь;
+   при «уменьшении движения» наведения нет. */
+.logo { position: relative; display: block; width: calc(170 * var(--k)); aspect-ratio: 843 / 300; }   /* лок-ап «Материалы/Заменить/Logo dark.svg», части — по его рамкам */
+.logo img { position: absolute; max-width: none; height: auto; transition: opacity var(--dur-s) var(--ease-out); }
+.logo__mark { left: 0.356%; top: 1.333%; width: 29.893%; }
+.logo__name { left: 33.571%; top: 27%; width: 65.955%; }
+.logo__slogan { left: 33.571%; top: 64.667%; width: 64.887%; }
+.logo .is-light { opacity: 0; }
+.is-light-ui .logo .is-light { opacity: 1; }
+.is-light-ui .logo .is-dark { opacity: 0; }
+.logo__part { position: absolute; inset: 0; }
+.logo__text { position: absolute; display: block; height: auto; overflow: hidden; fill: currentColor; color: var(--ink); transition: color var(--dur-s) var(--ease-out); }
+.is-light-ui .logo__text { color: var(--white); }
+.logo__c { transition: transform var(--dur-m) var(--ease) var(--d, 0s); }
+.logo__c use { transition: opacity var(--dur-m) var(--ease) var(--d, 0s); }
+.logo__c use + use { opacity: 0; }
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .hdr__logo:hover .logo__c, .site-footer__brand a:hover .logo__c { transform: translateY(var(--lh)); }
+  .hdr__logo:hover .logo__c use, .site-footer__brand a:hover .logo__c use { opacity: 0; }
+  .hdr__logo:hover .logo__c use + use, .site-footer__brand a:hover .logo__c use + use { opacity: 1; }
+}
+
+/* ---------- Шапка (585:3067): Default вверху, Variant2 после прокрутки ----------
+   Закреплена сверху, без фона, не прячется. Цвет — по фону блока под серединой шапки (header-stick.js):
+   is-light-ui — светлая над фото. Смена вида — класс is-scrolled (первый сдвиг больше 8 px). */
+[data-include="header"] { position: fixed; top: 0; left: 0; right: 0; z-index: 50; pointer-events: none; }
+html:not(.js) [data-include="header"] { position: absolute; }   /* без JS шапка не меняет цвет — уходит вместе с первым экраном */
+.hdr { --hdr-ink: var(--ink); --hdr-soft: var(--soft); --hdr-nav: var(--ink); position: relative; display: flex; align-items: center; justify-content: space-between; height: var(--header-h); max-width: 2560px; margin-inline: auto; padding: 0 var(--gutter); color: var(--hdr-ink); }
+.hdr > * { pointer-events: auto; }
+.hdr.is-light-ui { --hdr-ink: var(--white); --hdr-soft: var(--light-soft); --hdr-nav: var(--light); }
+.hdr__logo { display: block; flex: none; }
+.hdr .logo { width: max(136px, calc(170 * var(--k))); }
+.hdr__nav { display: flex; gap: calc(32 * var(--k)); overflow: hidden; padding-block: 2px; }
+.hdr__nav a { display: block; color: var(--hdr-nav); text-decoration: none; font-size: max(16px, calc(18 * var(--k))); line-height: 1.5556; white-space: nowrap; transition: color var(--dur-s) var(--ease-out), transform var(--dur-s) var(--ease-out), opacity var(--dur-s) var(--ease-out); }
+.hdr__side { display: flex; align-items: center; gap: calc(32 * var(--k)); transition: transform var(--dur-s) var(--ease-out); }
+.hdr__msg { display: flex; gap: max(8px, calc(12 * var(--k))); color: var(--hdr-ink); }
+.hdr__msg .msg { width: max(32px, calc(32 * var(--k))); height: max(32px, calc(32 * var(--k))); }
+.hdr__contacts { display: grid; gap: calc(4 * var(--k)); }
+.hdr__phone { font-family: var(--font-phone); font-weight: 500; font-size: max(16px, calc(18 * var(--k))); line-height: 1.5556; text-align: right; color: var(--hdr-ink); white-space: nowrap; transition: color var(--dur-s) var(--ease-out); }
+.hdr__ask { justify-self: start; font-size: max(13px, calc(14 * var(--k))); line-height: 1.4286; color: var(--hdr-soft); text-decoration: none; transition: color var(--dur-s) var(--ease-out); }
+/* Бургер 59 × 32: тёмный квадрат со светлыми линиями; над фото — светлый с тёмными */
+.burger { --b-bg: var(--ink); --b-line: var(--light); position: absolute; right: var(--gutter); top: 50%; display: block; padding: 0; border: 0; width: max(56px, calc(59 * var(--k))); height: max(32px, calc(32 * var(--k))); margin-top: min(-16px, calc(-16 * var(--k))); background: var(--b-bg); opacity: 0; visibility: hidden; transition: opacity var(--dur-s) var(--ease-out), visibility var(--dur-s), background-color var(--dur-m) var(--ease-out); }
+.burger::before, .burger::after { content: ""; position: absolute; left: 33.9%; right: 33.9%; height: 1px; background: var(--b-line); transition: background-color var(--dur-m) var(--ease-out); }
+.burger::before { top: 37.5%; }
+.burger::after { top: 62.5%; }
+.is-light-ui .burger { --b-bg: var(--white); --b-line: var(--ink); }
+.hdr.is-scrolled .hdr__nav a { transform: translateY(-110%); opacity: 0; }
+.hdr.is-scrolled .hdr__nav a:nth-child(2) { transition-delay: .03s; }
+.hdr.is-scrolled .hdr__nav a:nth-child(3) { transition-delay: .06s; }
+.hdr.is-scrolled .hdr__nav a:nth-child(4) { transition-delay: .09s; }
+.hdr.is-scrolled .hdr__nav a:nth-child(5) { transition-delay: .12s; }
+.hdr.is-scrolled .hdr__nav a:nth-child(6) { transition-delay: .15s; }
+.hdr.is-scrolled .hdr__nav a:nth-child(7) { transition-delay: .18s; }
+.hdr.is-scrolled .hdr__nav { pointer-events: none; }
+.hdr.is-scrolled .hdr__side { transform: translateX(calc(-1 * (max(56px, calc(59 * var(--k))) + calc(32 * var(--k))))); }
+.hdr.is-scrolled .burger { opacity: 1; visibility: visible; }
+@media (hover: hover) {
+  .hdr__nav a:hover, .hdr__ask:hover { color: var(--accent); }
+  .burger:hover { --b-bg: var(--accent); --b-line: var(--ink); }
+}
+/* Диапазон 1024–1279 — бургер на всём диапазоне (брекпоинты владельца 2026-10-15: 1440 · 1280 · 1024 · 768 · 480 · 390;
+   уже 1240 семь пунктов меню стоят теснее 60 px от логотипа и контактов — замер) — только вид после прокрутки (ТЗ 5.1) */
+@media (max-width: 1279.98px) {
+  .hdr__nav { display: none; }
+  .hdr .hdr__side { transform: translateX(calc(-1 * (max(56px, calc(59 * var(--k))) + calc(32 * var(--k))))); }
+  .hdr .burger { opacity: 1; visibility: visible; }
+}
+@media (max-width: 1023.98px) {
+  .hdr { --k: .5333px; }
+  .hdr .logo { width: 136px; }
+  .hdr .msg { width: 32px; height: 32px; }
+  .hdr .burger { width: 56px; height: 32px; margin-top: -16px; }
+  .hdr .hdr__side { gap: 24px; transform: translateX(-80px); }
+}
+@media (max-width: 767.98px) {
+  .hdr .logo { width: 128px; }
+  .hdr__msg, .hdr__contacts { display: none; }
+}
+
+/* ---------- Меню (929:581) ----------
+   Затемнение 0,8 с, панель справа на половину экрана за 1,2 с (кривая Out), пункты — по буквам (motion.js).
+   До 1023.98 — панель во весь экран. Страница под меню стоит. */
+.menu { position: fixed; inset: 0; z-index: 70; visibility: hidden; pointer-events: none; }
+.menu.is-open { visibility: visible; pointer-events: auto; }
+.menu.is-closing { visibility: visible; }
+.menu__overlay { position: absolute; inset: 0; background: var(--overlay); opacity: 0; transition: opacity var(--dur-m) var(--ease-out); }
+.menu.is-open .menu__overlay { opacity: 1; }
+.menu__panel { position: absolute; top: 0; right: 0; bottom: 0; display: flex; flex-direction: column; width: max(50%, 640px); padding: calc(124 * var(--u)) var(--gutter) var(--gutter); background: var(--ink); color: var(--light); overflow-y: auto; transform: translateX(100%); transition: transform var(--dur-l) var(--ease-out); }
+.menu.is-open .menu__panel { transform: none; }
+.menu.is-closing .menu__panel { transition: transform var(--dur-m) var(--ease-in-out); }
+.menu.is-closing .menu__overlay { transition: opacity var(--dur-m) var(--ease-in-out); }
+/* Крестик — как в макете 929:581: 60 × 32, значок 16; целые пиксели на любой ширине (правка владельца 2026-10-15, L96) */
+.menu__close { position: fixed; top: calc((var(--header-h) - 32px) / 2); top: round(calc((var(--header-h) - 32px) / 2), 1px); right: var(--gutter); right: round(var(--gutter), 1px); display: grid; place-items: center; width: 60px; height: 32px; padding: 0; border: 0; background: var(--light); color: var(--ink); transition: background-color var(--dur-m) var(--ease-out); }
+.menu__close svg { width: 16px; height: 16px; }
+.menu__body { display: flex; justify-content: space-between; gap: 32px; }
+/* Пункты — как разделы в подвале: Buyan 24/32, промежуток 12 (правка владельца 2026-10-16: «по размеру сделай как в футере»; было 72/80) */
+.menu__nav { display: grid; align-content: start; gap: calc(12 * var(--u)); }
+.menu__nav a { display: block; width: max-content; font-family: var(--font-display); font-size: max(24px, calc(24 * var(--u))); line-height: max(32px, calc(32 * var(--u))); color: var(--light); text-decoration: none; transition: color var(--dur-s) var(--ease-out); }
+/* Колонка «Связаться»: подпись, телефон, почта, мессенджеры, адрес (правки владельца 2026-10-16). Режим работы, парковка
+   и юридические ссылки — только в подвале (L124). Строки — через 24 макета, не меньше 20 px (было 12 — «сделай больше отступы
+   между элементами-строками», L124). Колонка 283 (min-content — не уже телефона); все строки — по одной линии слева:
+   у первого значка мессенджера рисунок отступает от края квадрата на 2,7 / 32 — ряд сдвинут на столько же влево. */
+.menu__contacts { display: grid; align-content: start; gap: max(20px, calc(24 * var(--u))); width: min-content; min-width: max(220px, calc(283 * var(--u))); flex: none; }
+.menu__caption { font-size: max(13px, calc(14 * var(--u))); line-height: 1.4286; color: var(--light-soft); }
+.menu__phone { font-family: var(--font-display); font-size: max(30px, calc(40 * var(--u))); line-height: 1.2; color: var(--light); white-space: nowrap; }
+.menu__email, .menu__address { font-size: max(20px, calc(24 * var(--u))); line-height: 1.3333; font-weight: 500; color: var(--light); }
+.menu__msg { --msg: max(44px, calc(48 * var(--u))); display: flex; gap: calc(12 * var(--u)); margin-left: calc(-2.7 / 32 * var(--msg)); margin-left: round(calc(-2.7 / 32 * var(--msg)), 1px); color: var(--light); }
+.menu__msg .msg { width: var(--msg); height: var(--msg); }
+.menu__address { text-wrap: balance; }   /* в две строки поровну: без одного слова на второй строке */
+.menu__buttons { display: flex; flex-wrap: wrap; gap: calc(20 * var(--u)); margin-top: auto; padding-top: 32px; }
+.menu__buttons .btn { --k: var(--u); min-width: calc(290 * var(--u)); }
+@media (hover: hover) {
+  .menu__nav a:hover { color: var(--accent); }
+  .menu__close:hover { background: var(--accent); }
+}
+@media (max-width: 1023.98px) {
+  .menu__panel { width: 100%; padding: calc(var(--header-h) + 24px) var(--gutter) 32px; }
+  .menu__close { top: calc((var(--header-h) - 32px) / 2); width: 56px; height: 32px; }
+  .menu__close svg { width: 16px; height: 16px; }
+  .menu__nav { gap: 10px; }   /* как подвал до 1023 */
+  .menu__phone { font-size: 32px; line-height: 40px; }
+  .menu__email, .menu__address { font-size: 20px; line-height: 28px; }
+  .menu__msg { --msg: 48px; }
+  .menu__buttons .btn { min-width: 260px; }
+}
+@media (max-width: 767.98px) {
+  .menu__body { flex-direction: column; gap: 40px; }
+  .menu__contacts { width: auto; }
+  .menu__buttons { flex-direction: column; }
+  .menu__buttons .btn { width: 100%; min-width: 0; }
+}
+
+/* ---------- Панель аренды (597:97) ----------
+   Затемнение 0,6 с, белая панель 800 справа за 0,9 с, закрытие 0,8 с. До 1023.98 — во весь экран, как меню. */
+.rent { position: fixed; inset: 0; z-index: 80; visibility: hidden; pointer-events: none; }
+.rent.is-open { visibility: visible; pointer-events: auto; }
+.rent.is-closing { visibility: visible; }
+.rent__overlay { position: absolute; inset: 0; background: var(--overlay); opacity: 0; transition: opacity .6s var(--ease-out); }
+.rent.is-open .rent__overlay { opacity: 1; }
+.rent__panel { position: absolute; top: 0; right: 0; bottom: 0; display: flex; flex-direction: column; width: max(calc(800 * var(--u)), 560px); max-width: 100%; background: var(--surface); overflow-y: auto; transform: translateX(100%); transition: transform .9s var(--ease-out); }
+.rent.is-open .rent__panel { transform: none; }
+.rent__panel:focus { outline: none; }   /* фокус встаёт на панель при открытии (rent.js) — поля в обычном виде, рамки у панели нет */
+.rent.is-closing .rent__panel { transition: transform var(--dur-m) var(--ease-in-out); }
+.rent.is-closing .rent__overlay { transition: opacity var(--dur-m) var(--ease-in-out); }
+.rent__inner { margin-block: auto; padding: calc(80 * var(--u)); }
+.rent__head { display: grid; gap: calc(16 * var(--u)); margin-bottom: calc(48 * var(--u)); }
+/* Крестик — как в макете 597:97: 59 × 32, значок 16 в 21 px от левого края (в макете 21,5); целые пиксели на любой ширине,
+   не мельче на ноутбуке (правка владельца 2026-10-15, L96). Тот же крестик — у панели «Заявка на консультацию». */
+.rent__close { position: fixed; top: calc((var(--header-h) - 32px) / 2); top: round(calc((var(--header-h) - 32px) / 2), 1px); right: var(--gutter); right: round(var(--gutter), 1px); z-index: 1; display: flex; align-items: center; width: 59px; height: 32px; padding: 0 0 0 21px; border: 0; background: var(--ink); color: var(--light); transition: background-color var(--dur-m) var(--ease-out), color var(--dur-m) var(--ease-out); }
+.rent__close svg { width: 16px; height: 16px; }
+@media (hover: hover) { .rent__close:hover { background: var(--accent); color: var(--ink); } }
+@media (max-width: 1023.98px) {
+  .rent__inner { padding: calc(var(--header-h) + 8px) 40px 40px; }
+  .rent__head { gap: 12px; margin-bottom: 32px; }
+  .rent__close { width: 56px; padding-left: 20px; }
+}
+@media (max-width: 1023.98px) { .rent__panel { width: 100%; } }
+@media (max-width: 767.98px) { .rent__inner { padding: calc(var(--header-h) + 8px) var(--gutter) 32px; } }
+
+/* ---------- Поля формы (UI-кит 607:96) ---------- */
+.form { --k: var(--u); display: grid; gap: calc(32 * var(--k)); }
+.form__fields { display: grid; gap: calc(16 * var(--k)); }
+.form__row { display: grid; grid-template-columns: 1fr 1fr; gap: calc(16 * var(--k)); align-items: start; }
+.field { position: relative; display: grid; gap: calc(8 * var(--k)); }
+.field__box { display: flex; align-items: center; gap: calc(16 * var(--k)); width: 100%; height: max(56px, calc(64 * var(--k))); padding: 0 calc(24 * var(--k)); border: 0; background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); color: var(--ink); text-align: left; font-size: max(16px, calc(18 * var(--k))); line-height: 1.5556; transition: box-shadow var(--dur-s) var(--ease-out), background-color var(--dur-s) var(--ease-out); }
+@media (hover: hover) { .field__box:hover { box-shadow: inset 0 0 0 1px var(--soft); } }
+.field__box:focus-within, .field.is-open .field__box, button.field__box:focus-visible { box-shadow: inset 0 0 0 1px var(--ink); outline: 0; }
+.field.is-error .field__box { box-shadow: inset 0 0 0 1px var(--error); }
+.field__input { flex: 1; min-width: 0; height: 100%; padding: 0; border: 0; outline: 0; background: transparent; color: var(--ink); caret-color: var(--ink); }
+.field__input::placeholder, .field__placeholder { color: var(--soft); opacity: 1; }
+.field__input:focus::placeholder { color: transparent; transition: color .2s; }
+.field__value { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.field__icon { flex: none; width: calc(24 * var(--k)); height: calc(24 * var(--k)); min-width: 20px; min-height: 20px; color: var(--soft); }
+.field__error { font-size: max(13px, calc(14 * var(--k))); line-height: 1.4286; color: var(--error); }
+.field__error:empty { display: none; }
+.field--area .field__box { height: calc(136 * var(--k)); min-height: 120px; align-items: stretch; padding-block: calc(18 * var(--k)); }
+.field--area textarea { resize: none; height: 100%; line-height: 1.5556; }
+.field__country { display: flex; align-items: center; gap: calc(8 * var(--k)); flex: none; }
+.field__flag { width: calc(24 * var(--k)); min-width: 20px; height: auto; }
+.field__country .field__icon { width: calc(16 * var(--k)); height: calc(16 * var(--k)); min-width: 14px; min-height: 14px; }
+.field__code { flex: none; color: var(--ink); }
+.field.is-disabled .field__box { background: var(--disabled-bg); color: var(--light-soft); }
+/* Выпадающий список (Form / Dropdown) и календарь (Form / Date picker) */
+.drop { position: absolute; left: 0; top: calc(100% + 8px); z-index: 5; min-width: 100%; padding: calc(8 * var(--k)) 0; background: var(--surface); box-shadow: inset 0 0 0 1px var(--line), 0 12px 32px rgb(51 41 32 / .08); opacity: 0; visibility: hidden; transform: translateY(-8px); transition: opacity var(--dur-s) var(--ease-out), transform var(--dur-s) var(--ease-out), visibility var(--dur-s); }
+.field.is-open .drop { opacity: 1; visibility: visible; transform: none; }
+.field.is-error .drop { top: calc(100% - 20px); }
+.drop__item { display: flex; align-items: center; justify-content: space-between; gap: 16px; width: 100%; height: max(48px, calc(56 * var(--k))); padding: 0 calc(24 * var(--k)); border: 0; background: var(--surface); color: var(--ink); text-align: left; font-size: max(16px, calc(18 * var(--k))); line-height: 1.5556; transition: background-color var(--dur-s) var(--ease-out); }
+.drop__item svg { width: calc(24 * var(--k)); height: calc(24 * var(--k)); min-width: 20px; min-height: 20px; visibility: hidden; }
+.drop__item[aria-selected="true"] svg { visibility: visible; }
+.drop__item:focus-visible { outline: 0; background: var(--light); }
+@media (hover: hover) { .drop__item:hover { background: var(--light); } }
+.cal { width: max(336px, calc(384 * var(--k))); padding: calc(24 * var(--k)); }
+.cal__head { display: grid; grid-template-columns: 48px 1fr 48px; align-items: center; margin-bottom: calc(16 * var(--k)); }
+.cal__month { text-align: center; font-weight: 500; color: var(--ink); }
+.cal__nav { display: grid; place-items: center; width: 48px; height: 48px; padding: 0; border: 0; background: none; color: var(--soft); }
+.cal__nav:disabled { opacity: .35; cursor: default; }
+.cal__nav svg { width: 24px; height: 24px; }
+.cal__week, .cal__days { display: grid; grid-template-columns: repeat(7, 1fr); }
+.cal__week { margin-bottom: calc(16 * var(--k)); font-size: max(13px, calc(14 * var(--k))); line-height: 1.4286; text-align: center; color: var(--soft); }
+.cal__day { aspect-ratio: 1; padding: 0; border: 0; background: var(--surface); color: var(--ink); font-size: max(16px, calc(18 * var(--k))); transition: background-color var(--dur-s) var(--ease-out); }
+.cal__day.is-today { box-shadow: inset 0 0 0 1px var(--ink); }
+.cal__day[aria-selected="true"] { background: var(--accent); }
+.cal__day:disabled { color: var(--light-soft); cursor: default; }
+@media (hover: hover) { .cal__day:not(:disabled):not([aria-selected="true"]):hover, .cal__nav:not(:disabled):hover { background: var(--light); } }
+/* Согласие (Form / Consent) и галочка (Form / Checkbox).
+   Галочка — по центру текста согласия (правка владельца в макете 2026-10-15: блок 42, галочка 24 на 9 от верха);
+   строка ошибки под текстом галочку не сдвигает */
+.consent { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: calc(16 * var(--k)); row-gap: 8px; align-items: start; }
+.consent > .check { grid-row: 1; align-self: center; }
+.check { position: relative; flex: none; width: max(22px, calc(24 * var(--k))); height: max(22px, calc(24 * var(--k))); margin: 0; }
+.check input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; }
+.check span { position: absolute; inset: 0; display: grid; place-items: center; box-shadow: inset 0 0 0 1px var(--soft); color: var(--light); pointer-events: none; transition: background-color var(--dur-s) var(--ease-out), box-shadow var(--dur-s) var(--ease-out); }
+.check svg { width: 100%; height: 100%; opacity: 0; transition: opacity var(--dur-s) var(--ease-out); }
+.check input:checked + span { background: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+.check input:checked + span svg { opacity: 1; }
+.check input:focus-visible + span { outline: 2px solid var(--accent-press); outline-offset: 2px; }
+.consent.is-error .check span { box-shadow: inset 0 0 0 1px var(--error); }
+@media (hover: hover) { .check input:hover:not(:checked) + span { box-shadow: inset 0 0 0 1px var(--ink); } }
+.consent__text { display: contents; font-size: max(13px, calc(14 * var(--k))); line-height: 1.4286; color: var(--soft); }
+.consent__text > label { grid-column: 2; grid-row: 1; padding-top: 2px; }
+.consent__text > .field__error { grid-column: 2; grid-row: 2; }
+.consent__text a { color: var(--muted); text-decoration: underline; text-underline-offset: 2px; text-decoration-thickness: 1px; transition: color var(--dur-s) var(--ease-out); }
+@media (hover: hover) { .consent__text a:hover { color: var(--ink); text-decoration-color: transparent; } }
+.form__status { font-size: max(16px, calc(18 * var(--k))); line-height: 1.5556; color: var(--ink); }
+.form__status:empty { display: none; }
+@media (max-width: 1023.98px) { .form { --k: .75px; } }
+@media (max-width: 767.98px) { .form__row { grid-template-columns: 1fr; } }
+
+/* ---------- Подпись блока: текст — линия — текст (585:2976 и др.) ---------- */
+.mark { display: grid; justify-items: center; gap: calc(24 * var(--k)); text-align: center; font-weight: 500; font-size: max(16px, calc(18 * var(--k))); line-height: 1.5556; color: var(--muted); }
+.mark__line { width: 1px; height: calc(300 * var(--k)); background: currentColor; transform-origin: 50% 0; }
+
+/* ---------- Подвал (887:753) ----------
+   Сетка макета: 12 колонок по 131,67, промежуток 20, поля 60. Разделы — колонки 4, 6, 8; «Связаться» — 11–12. */
+.site-footer { --k: var(--u); position: relative; background: var(--footer); color: var(--ink); }
+.site-footer__in { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: calc(20 * var(--k)); max-width: 2560px; margin-inline: auto; padding: calc(80 * var(--k)) var(--gutter) calc(37 * var(--k)); }
+.site-footer__brand { grid-column: 1 / span 3; display: grid; align-content: start; gap: calc(12 * var(--k)); width: calc(260 * var(--k)); }
+.site-footer__logo { width: calc(260 * var(--k)); height: auto; }
+.site-footer__info { display: grid; gap: calc(12 * var(--k)); }
+/* Тексты подвала — по макету 887:753 (правка владельца 2026-10-15, L114): разделы — Buyan 24/32; юридические ссылки, почта,
+   адрес, описание и УНП — Manrope 400 16/24; до 1920 не мельче макета (целые пиксели), выше — растут с шириной. */
+.site-footer__muted { font-size: max(16px, calc(16 * var(--k))); line-height: max(24px, calc(24 * var(--k))); color: var(--soft); }
+.site-footer__nav { grid-column: 4 / span 6; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: calc(20 * var(--k)); }
+.site-footer__col { display: grid; align-content: start; gap: calc(12 * var(--k)); }
+.site-footer__col a, .site-footer__email, .site-footer__address { font-size: max(16px, calc(16 * var(--k))); line-height: max(24px, calc(24 * var(--k))); font-weight: 400; color: var(--ink); text-decoration: none; transition: color var(--dur-s) var(--ease-out); }
+.site-footer__nav .site-footer__col:not(:last-child) a { font-family: var(--font-display); font-size: max(24px, calc(24 * var(--k))); line-height: max(32px, calc(32 * var(--k))); }
+.site-footer__col a { justify-self: start; }
+.site-footer__contacts { grid-column: 11 / span 2; display: grid; align-content: start; gap: calc(12 * var(--k)); }
+.site-footer__caption { font-size: max(13px, calc(14 * var(--k))); line-height: max(18px, calc(20 * var(--k))); color: var(--soft); }
+.site-footer__phone { font-family: var(--font-display); font-size: max(30px, calc(40 * var(--k))); line-height: 1.2; white-space: nowrap; }
+.site-footer__msg { display: flex; gap: calc(12 * var(--k)); color: var(--ink); }
+.site-footer__msg .msg { width: calc(48 * var(--k)); height: calc(48 * var(--k)); min-width: 40px; min-height: 40px; }
+.site-footer__photo { grid-column: 1 / span 2; margin-top: calc(88 * var(--k));   /* фото и слоган — на y 380 макета: 88 под колонкой «Связаться» */ width: calc(260 * var(--k)); height: calc(272 * var(--k)); overflow: hidden; }
+.site-footer__photo img { width: 100%; height: 100%; object-fit: cover; }
+.site-footer__slogan { grid-column: 4 / -1; align-self: end; display: grid; gap: calc(12 * var(--k)); font-family: var(--font-display); font-size: max(64px, calc(130 * var(--k))); line-height: 1; letter-spacing: calc(4 * var(--k)); color: var(--light-soft); }
+.site-footer__slogan span { display: block; white-space: nowrap; }
+.site-footer__slogan span + span { padding-left: calc(303 * var(--k)); }
+.site-footer__bottom { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; align-items: center; margin-top: calc(16 * var(--k)); font-size: max(13px, calc(14 * var(--k))); line-height: max(18px, calc(20 * var(--k))); color: var(--soft); }
+.site-footer__copy { grid-column: 1 / span 3; }
+.site-footer__disclaimer { grid-column: 4 / span 6; }
+.site-footer__hours { grid-column: 11 / span 2; display: grid; gap: calc(4 * var(--k)); }
+@media (hover: hover) { .site-footer__col a:hover { color: var(--soft); } }
+@media (max-width: 1023.98px) {
+  .site-footer__in { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 32px; row-gap: 40px; padding: 56px var(--gutter) 32px; }
+  .site-footer__brand { grid-column: 1; width: auto; gap: 12px; }
+  .site-footer__logo { width: 200px; }
+  .site-footer__caption { font-size: 13px; line-height: 18px; }
+  .site-footer__muted { font-size: 16px; line-height: 24px; }
+  .site-footer__nav { grid-column: 2; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 24px; row-gap: 24px; }
+  .site-footer__nav .site-footer__col:last-child { grid-column: 1 / -1; }
+  .site-footer__col, .site-footer__contacts { gap: 10px; }
+  .site-footer__contacts { grid-column: 1 / -1; }
+  .site-footer__col a, .site-footer__email, .site-footer__address { font-size: 16px; line-height: 24px; }
+  .site-footer__nav .site-footer__col:not(:last-child) a { font-size: 24px; line-height: 32px; }
+  .site-footer__phone { font-size: 32px; line-height: 40px; }
+  .site-footer__msg { gap: 12px; }
+  .site-footer__msg .msg { width: 48px; height: 48px; }
+  .site-footer__photo { grid-column: 1; margin-top: 0; width: 100%; height: auto; aspect-ratio: 260 / 272; }
+  .site-footer__slogan { grid-column: 2; gap: 8px; font-size: 64px; letter-spacing: 2px; }
+  .site-footer__slogan span { white-space: normal; }
+  .site-footer__slogan span + span { padding-left: 0; }
+  .site-footer__bottom { grid-template-columns: 1fr; gap: 12px; margin-top: 0; font-size: 13px; line-height: 18px; }
+  .site-footer__copy, .site-footer__disclaimer, .site-footer__hours { grid-column: 1; }
+}
+@media (max-width: 767.98px) {
+  .site-footer__in { grid-template-columns: 1fr; padding-top: 48px; }
+  .site-footer__brand, .site-footer__nav, .site-footer__photo, .site-footer__slogan { grid-column: 1; }
+  .site-footer__nav { grid-template-columns: 1fr 1fr; }
+  .site-footer__photo { aspect-ratio: 4 / 3; }
+  .site-footer__slogan { font-size: 48px; letter-spacing: 1px; }
+  .site-footer__slogan span + span { padding-left: 22%; }
+}
+
+/* ---------- Текстовые страницы: юридические и 404 (общая шапка и подвал) ---------- */
+.doc { max-width: calc(920 * var(--u) + 2 * var(--gutter)); min-width: min(100%, 680px); margin-inline: auto; padding: calc(var(--header-h) + 80 * var(--u)) var(--gutter) calc(120 * var(--u)); color: var(--muted); }
+.doc h1 { margin-bottom: max(24px, calc(40 * var(--u))); font-family: var(--font-display); font-weight: 400; font-size: max(40px, calc(60 * var(--u))); line-height: 1.2; color: var(--ink); text-wrap: balance; }
+.doc h2 { margin: max(32px, calc(48 * var(--u))) 0 max(12px, calc(16 * var(--u))); font-size: max(20px, calc(24 * var(--u))); line-height: 1.3333; font-weight: 500; color: var(--ink); }
+.doc p, .doc li { font-size: max(16px, calc(18 * var(--u))); line-height: 1.5556; }
+.doc p + p, .doc ul, .doc ol { margin-top: 16px; }
+.doc a { color: var(--ink); text-underline-offset: 3px; }
+@media (max-width: 1023.98px) { .doc { padding: calc(var(--header-h) + 48px) var(--gutter) 80px; } .doc h1 { font-size: 40px; line-height: 48px; } }
+@media (max-width: 767.98px) { .doc h1 { font-size: 32px; line-height: 36px; } }

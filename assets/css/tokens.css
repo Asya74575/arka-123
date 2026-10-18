@@ -1,0 +1,104 @@
+/* Токены сайта АРКА 123 — по макету Figma «Design 1920 · Home» (582:807) и TZ-VERSTKA.md, раздел 2.
+   Цвета, шрифты и единица макета задаются только здесь. Блоки берут значения через var(). */
+
+/* ---------- Шрифты: только локальные файлы site/assets/fonts ---------- */
+/* Buyan Regular (HESHKE / Yu Type): только прописные. Перед публикацией — веб-лицензия (TZ-VERSTKA.md, 2.3).
+   Знаков ², ×, —, «» в Buyan нет — их рисует запасной шрифт (как в Figma). */
+@font-face {
+  font-family: 'Buyan';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(../fonts/buyan-400-normal.woff2) format('woff2');
+}
+/* Запасной для Buyan — Oswald Light (OFL), подогнан по ширине строк: пока Buyan грузится, строки не прыгают */
+@font-face {
+  font-family: 'Buyan Fallback';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(../fonts/oswald-cyrillic-300-normal.woff2) format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+  size-adjust: 87%;
+  ascent-override: 96%;
+  descent-override: 19%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'Buyan Fallback';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(../fonts/oswald-latin-300-normal.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  size-adjust: 87%;
+  ascent-override: 96%;
+  descent-override: 19%;
+  line-gap-override: 0%;
+}
+/* Manrope 400 / 500 (OFL) */
+@font-face { font-family: 'Manrope'; font-style: normal; font-weight: 400; font-display: swap; src: url(../fonts/manrope-cyrillic-400-normal.woff2) format('woff2'); unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+@font-face { font-family: 'Manrope'; font-style: normal; font-weight: 400; font-display: swap; src: url(../fonts/manrope-latin-400-normal.woff2) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'Manrope'; font-style: normal; font-weight: 500; font-display: swap; src: url(../fonts/manrope-cyrillic-500-normal.woff2) format('woff2'); unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+@font-face { font-family: 'Manrope'; font-style: normal; font-weight: 500; font-display: swap; src: url(../fonts/manrope-latin-500-normal.woff2) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+/* Roboto 500 (OFL) — только телефон в шапке, так в макете */
+@font-face { font-family: 'Roboto'; font-style: normal; font-weight: 500; font-display: swap; src: url(../fonts/roboto-cyrillic-500-normal.woff2) format('woff2'); unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+@font-face { font-family: 'Roboto'; font-style: normal; font-weight: 500; font-display: swap; src: url(../fonts/roboto-latin-500-normal.woff2) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+
+:root {
+  /* ---------- Цвета (переменные Figma → токены, ТЗ 2.2) ---------- */
+  --page: #E1E3E9;          /* фон арок: «Окна», «Форматы», «Аренда»; фон карты */
+  --surface: #FFFFFF;       /* фон страницы между арками, поля формы */
+  --ink: #332920;           /* заголовки, тёмная шапка, панель меню */
+  --muted: #584C40;         /* основной текст, текст на кнопке */
+  --soft: #8B8681;          /* подписи, «Задать вопрос» в тёмной шапке */
+  --line: #D7C9B7;          /* линии, рамки */
+  --accent: #B1CAE3;        /* кнопка */
+  --accent-hover: #A0BEDC;
+  --accent-press: #8FB1D4;
+  --light: #F4EFE7;         /* текст и значки поверх фото, пункты меню */
+  --light-fact: #F4F2EE;    /* факты первого экрана */
+  --light-soft: #C0B5B0;    /* подписи поверх фото и на панели меню; слоган подвала */
+  --footer: #F1EFEB;
+  --error: #B4412F;
+  --disabled-bg: #F3F3F3;
+  --white: #FFFFFF;
+  --overlay: rgb(51 41 32 / .6);   /* #332920, 60 % */
+
+  /* ---------- Шрифты ---------- */
+  --font-display: 'Buyan', 'Buyan Fallback', 'Oswald', 'Arial Narrow', sans-serif;
+  --font-text: 'Manrope', system-ui, -apple-system, 'Segoe UI', Arial, sans-serif;
+  --font-phone: 'Roboto', var(--font-text);
+
+  /* ---------- Единица макета 1920 (ТЗ 2.4) ----------
+     --u — 1 px макета. Ширина берётся у body (container-type), а не у окна: полоса прокрутки не сдвигает сетку.
+     Выше 2560 содержимое не растёт. --s — единица экранных блоков: по меньшей стороне, чтобы на ноутбуке
+     1536 × 730 при 125 % всё помещалось в высоту окна. --k — единица, которой пользуются стили текста:
+     в обычных блоках это --u, в экранных — --s (переопределяется на блоке). */
+  --u: calc(min(100cqw, 2560px) / 1920);
+  --s: min(calc(min(100cqw, 2560px) / 1920), calc(100svh / 1080));
+  --k: var(--u);
+  --gutter: calc(60 * var(--u));
+
+  /* ---------- Движение (значения ERA, ТЗ 3) ---------- */
+  --dur-s: .4s;
+  --dur-m: .8s;
+  --dur-l: 1.2s;
+  --ease-out: cubic-bezier(.25, 1, .5, 1);
+  --ease-in-out: cubic-bezier(.75, 0, .25, 1);
+  --ease-in: cubic-bezier(.5, 0, .75, 0);
+  --ease: cubic-bezier(.25, .1, .25, 1);   /* «Ease» ERA — буквы подписи кнопки при наведении */
+
+  --header-h: max(72px, calc(84 * var(--u)));   /* не ниже шапки планшета: шкала не растёт к узким экранам */
+}
+
+/* Телефон и планшет: поля по ТЗ 4; единица --u остаётся для пропорций, текст — своей шкалой (base.css) */
+@media (max-width: 1023.98px) {
+  :root { --gutter: 32px; --header-h: 72px; }
+}
+@media (max-width: 767.98px) {
+  :root { --gutter: 16px; --header-h: 64px; }
+}
+@media (min-width: 390px) and (max-width: 767.98px) {
+  :root { --gutter: 20px; }
+}

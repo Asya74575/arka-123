@@ -1,0 +1,63 @@
+/* 3D-модель зала (задание 3 ТЗ, drafts/room-3d.md). С 2026-10-18 — в большой рамке блока «Наше помещение» (1800 × 896 на 1920,
+   как кадр видео в макете), а видеопрогулка — в «Форматах» (правка владельца: «поменять местами видео и 3д-планирование
+   помещения»; ведёт arka-123-a0; до этого модель стояла в «Форматах», 890 × 596, сессия arka-123-8e). Холст поверх картинки
+   модели, слой с подписями, на модели — подсказка и кнопки + / − (правка владельца 2026-10-16, L127; точек с фото нет),
+   под рамкой — кнопки видов строкой по центру, как заголовок блока; на телефоне 2 × 2. Без JS и без WebGL — картинка
+   модели (room3d__poster). Углы прямые (L22), кнопки не ниже 56 px (L32), маскота и облачка нет (L40). */
+.room3d__stage { position: relative; width: 100%; aspect-ratio: 1800 / 896; overflow: hidden; background: #dcdfe6; }   /* земля 3D-карты (fly.js, C.ground) — модель и карта в одном облике */
+.room3d__poster { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: cover; transition: opacity var(--dur-m) var(--ease-in-out); }
+.room3d__canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; opacity: 0; transition: opacity var(--dur-m) var(--ease-in-out); touch-action: pan-y; cursor: grab; outline-offset: -3px; }
+.room3d__canvas:active { cursor: grabbing; }
+.room3d.is-ready .room3d__canvas { opacity: 1; }
+.room3d.is-ready .room3d__poster { opacity: 0; }
+.room3d__layer { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity var(--dur-m) var(--ease-in-out); }   /* до первого кадра точки ещё не расставлены */
+.room3d.is-ready .room3d__layer { opacity: 1; }
+
+/* Подписи размеров — как метки 3D-карты (map.css: .fl__plate): белая плашка */
+.room3d__label { position: absolute; left: 0; top: 0; z-index: 1; padding: 6px 12px; background: var(--white); color: var(--ink); font: 400 max(12px, calc(14 * var(--u))) / 1.4286 var(--font-text); white-space: nowrap; transition: opacity var(--dur-s) var(--ease-out); }
+.room3d .is-hidden { opacity: 0; pointer-events: none; }
+
+/* Подсказка на модели (правка владельца 2026-10-16: «расположить иконку-подсказку, что с моделью можно взаимодействовать:
+   крутить, увеличивать, уменьшать», L127): белая плашка в левом нижнем углу, как подписи карты (с 2026-10-18 — внизу:
+   в большой рамке верх модели закрывает шапка, а на ноутбуке, пока блок стоит под аркой, он за краем окна); значок и строка —
+   «поворот» и «масштаб». Стоит всё время; появляется вместе с моделью. Без JS и WebGL её нет — там картинка. */
+.room3d__tip { position: absolute; left: 16px; bottom: 16px; z-index: 3; display: grid; gap: 4px; max-width: calc(100% - 100px); padding: 8px 12px; background: var(--white); color: var(--ink); font: 400 max(13px, calc(14 * var(--u))) / 1.4286 var(--font-text); pointer-events: none; opacity: 0; transition: opacity var(--dur-m) var(--ease-in-out); }
+.room3d.is-ready .room3d__tip { opacity: 1; }
+.room3d__tip-row { display: flex; align-items: center; gap: 8px; margin: 0; }
+.room3d__tip svg { flex: none; width: 20px; height: 20px; fill: currentColor; }
+/* Кнопки + / − в правом нижнем углу модели (напротив подсказки): квадраты 56 (L32),
+   углы прямые (L22), знак — линии, как плюс у «Вопросов» */
+.room3d__zoom { position: absolute; right: 16px; bottom: 16px; z-index: 3; display: grid; opacity: 0; transition: opacity var(--dur-m) var(--ease-in-out); }
+.room3d.is-ready .room3d__zoom { opacity: 1; }
+.room3d__zbtn { position: relative; width: 56px; height: 56px; padding: 0; border: 1px solid var(--line); background: var(--white); color: var(--ink); cursor: pointer; transition: background-color var(--dur-m) var(--ease-in-out), border-color var(--dur-m) var(--ease-in-out), opacity var(--dur-s) var(--ease-out); }
+.room3d__zbtn + .room3d__zbtn { border-top: 0; }
+.room3d__zbtn::before, .room3d__zbtn--in::after { content: ""; position: absolute; left: 50%; top: 50%; width: 18px; height: 2px; margin: -1px 0 0 -9px; background: currentColor; }
+.room3d__zbtn--in::after { transform: rotate(90deg); }
+.room3d__zbtn:disabled { opacity: .4; cursor: default; }
+
+/* Кнопки видов: без JS их нет (кнопки создаёт ui.js) */
+.room3d__side:not(:has(.room3d__view)) { display: none; }
+.room3d__side { margin-top: max(16px, calc(24 * var(--u))); }
+.room3d__views { display: grid; grid-template-columns: repeat(4, max-content); justify-content: center; gap: 8px; }
+.room3d__view { min-height: 56px; padding: 0 max(20px, calc(24 * var(--u))); border: 1px solid var(--line); background: var(--surface); color: var(--muted); font: 500 max(16px, calc(18 * var(--u))) / 1.33 var(--font-text); text-align: left; white-space: nowrap; cursor: pointer; transition: background-color var(--dur-m) var(--ease-in-out), border-color var(--dur-m) var(--ease-in-out), color var(--dur-m) var(--ease-in-out); }
+.room3d__view[aria-pressed="true"] { border-color: var(--ink); background: var(--ink); color: var(--light); cursor: default; }
+
+@media (hover: hover) {
+  .room3d__view:not([aria-pressed="true"]):hover { border-color: var(--accent); background: var(--accent); }
+  .room3d__zbtn:not(:disabled):hover { border-color: var(--accent); background: var(--accent); }
+}
+
+/* Планшет: рамка выше (как прежняя рамка модели 890 × 596) — модель крупнее; телефон: кнопки 2 × 2, рамка квадратная */
+@media (max-width: 1023.98px) {
+  .room3d__stage { aspect-ratio: 890 / 596; }
+}
+@media (max-width: 767.98px) {
+  .room3d__views { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .room3d__view { padding: 4px 8px; line-height: 1.25; text-align: center; white-space: normal; }   /* на 320 «Лекция и семинар» — в две строки внутри 56 px */
+}
+@media (max-width: 479.98px) {
+  .room3d__stage { aspect-ratio: 1 / 1; }   /* модель на телефоне крупнее; сцена и кнопки вместе помещаются в 390 × 640 */
+}
+@media (prefers-reduced-motion: reduce) {
+  .room3d__poster, .room3d__canvas, .room3d__layer, .room3d__tip, .room3d__zoom, .room3d__zbtn, .room3d__label, .room3d__view { transition: none; }
+}

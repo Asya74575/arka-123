@@ -1,0 +1,246 @@
+// Движение (TZ-VERSTKA.md, раздел 3): прокрутка с инерцией Lenis и общие появления по атрибутам.
+// Приёмы и значения — из кода era-residence.com (animateTextH / P / A, animateCtn, animateLine, circle-text; правка владельца
+// 2026-10-15: «у всех текстов есть анимация, анимации разные, плавные, лёгкие»):
+//   data-anim="chars"  — заголовок по буквам: буква поднимается на полвысоты, поворачивается из 90° и проявляется
+//                        (1,2 с; шаг 0,05 с, вся волна не дольше 0,9 с — у нас заголовки длиннее, чем у ERA);
+//   data-anim="accent" — крупная надпись по буквам: буква въезжает справа и откидывается из 90° по горизонтальной оси
+//                        (1,2 с, волна не дольше 1,2 с) — приём «рукописного» слова ERA;
+//   data-anim="lines"  — абзацы, подписи, значения: по строкам из-под маски (1,2 с, шаг 0,1 с);
+//   data-anim="rise"   — кнопки, карточки, пункты: проявление и подъём на 64 px макета (1,2 с, шаг 0,1 с в группе);
+//   data-anim="line"   — вертикальная линия прорисовывается сверху вниз (1,2 с); "line-x" — горизонтальная, слева направо;
+//   data-anim="arc"    — надпись по дуге арки: слова расходятся, пока арка проходит экран (word-spacing за прокруткой);
+//   data-anim-group    — элементы с data-anim внутри стартуют вместе, когда группа вошла в окно, по очереди через 0,1 с;
+//   data-parallax      — фото внутри рамки на 30 % выше рамки и сдвигается от −15 % до +15 %, пока рамка проходит экран.
+// Старт — когда верх элемента на 85 % высоты окна, один раз. Элементы внутри [data-anim-manual] запускает свой скрипт.
+// «Уменьшение движения» или нет GSAP — всё сразу на месте, прокрутка обычная (класс no-motion).
+(function () {
+  var html = document.documentElement;
+  var ARKA = window.ARKA = window.ARKA || {};
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var gsap = window.gsap;
+
+  // ---------- Ссылки на разделы этой же страницы (шапка, меню, подвал) — плавно к блоку, без перезагрузки и заставки ----------
+  // Правка владельца 2026-10-16: страница, открытая адресом «…/site/», и ссылка «…/site/index.html#раздел» — одна страница
+  // (раньше сравнивался путь целиком: браузер перезагружал главную, и заставка шла заново). Меню — menu.js, тот же PAGE.
+  var PAGE = ARKA.pageKey = function (p) { return String(p).replace(/\/index\.html$/i, '/'); };
+  document.addEventListener('click', function (event) {
+    var a = event.target.closest && event.target.closest('a[href*="#"]');
+    if (!a || a.hasAttribute('data-rent') || a.hasAttribute('data-menu-open') || event.defaultPrevented) return;
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    var u;
+    try { u = new URL(a.href, location.href); } catch (e) { return; }
+    if (u.origin !== location.origin || PAGE(u.pathname) !== PAGE(location.pathname) || u.search !== location.search && u.search) return;
+    if (!u.hash || u.hash.length < 2) return;
+    var target = document.getElementById(decodeURIComponent(u.hash.slice(1)));
+    if (!target) return;
+    event.preventDefault();
+    ARKA.scrollTo(target);
+    history.replaceState(null, '', location.pathname + location.search + u.hash);
+  });
+
+  if (reduce || !gsap || !window.ScrollTrigger) {
+    html.classList.remove('js-anim', 'show-loader');
+    html.classList.add('no-motion');
+    ARKA.motion = false;
+    ARKA.scrollTo = function (target) { var el = typeof target === 'string' ? document.querySelector(target) : target; if (el) el.scrollIntoView(); };
+    return;
+  }
+  gsap.registerPlugin(window.ScrollTrigger);
+  if (window.SplitText) gsap.registerPlugin(window.SplitText);
+  if (window.CustomEase) {
+    gsap.registerPlugin(window.CustomEase);
+    window.CustomEase.create('arkaOut', '.25,1,.5,1');
+    window.CustomEase.create('arkaInOut', '.75,0,.25,1');
+    window.CustomEase.create('arkaIn', '.5,0,.75,0');
+    window.CustomEase.create('horScroll', '.25,0,.75,1');
+  }
+  var OUT = window.CustomEase ? 'arkaOut' : 'power3.out';
+  ARKA.easeOut = OUT;
+  ARKA.motion = true;
+  html.classList.add('has-motion');
+
+  // ---------- Заставка — с первого экрана целиком ----------
+  // Правка владельца 2026-10-16 («белая полоса внизу, первый экран должен быть показан полностью»): после «Обновить» браузер
+  // возвращал прежнюю прокрутку, а пока идёт заставка, страница заперта (is-locked) и первый экран не держится сверху —
+  // он уезжал вверх, снизу выходили фон и арка второго блока. С заставкой страница всегда начинается с самого верха.
+  // Через ScrollTrigger.clearScrollMemory: ScrollTrigger после каждого пересчёта возвращает браузеру своё запомненное «auto»,
+  // и браузер после загрузки восстанавливал прокрутку снова.
+  // Адрес с разделом (index.html#раздел) при заставке — тоже с первого экрана: якорь убирается из адреса, иначе браузер
+  // прыгает к нему до конца загрузки.
+  var withLoader = html.classList.contains('show-loader');
+  if (withLoader) {
+    window.ScrollTrigger.clearScrollMemory('manual');
+    if (location.hash) history.replaceState(history.state, '', location.pathname + location.search);
+    window.scrollTo(0, 0);
+    window.addEventListener('load', function () { if (html.classList.contains('show-loader') && window.scrollY) window.scrollTo(0, 0); });
+  }
+
+  // ---------- Lenis: длительность 1,2 с, кривая min(1, 1.001 − 2^(−10t)); тачпад и палец — родные ----------
+  var lenis = null;
+  if (window.Lenis) {
+    lenis = new window.Lenis({ duration: 1.2, easing: function (t) { return Math.min(1, 1.001 - Math.pow(2, -10 * t)); }, smoothWheel: true });
+    lenis.on('scroll', window.ScrollTrigger.update);
+    gsap.ticker.add(function (time) { lenis.raf(time * 1000); });
+    gsap.ticker.lagSmoothing(0);
+    ARKA.lenis = lenis;
+  }
+  ARKA.scrollTo = function (target, opts) {
+    var el = typeof target === 'string' ? document.querySelector(target) : target;
+    if (lenis) lenis.scrollTo(el != null ? el : target, Object.assign({ duration: 1.2, offset: 0 }, opts || {}));
+    else if (el && el.scrollIntoView) el.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  // ---------- Появления ----------
+  var U = function () { return Math.min(document.body.clientWidth, 2560) / 1920; };
+  function manual(el) { return !!el.closest('[data-anim-manual]'); }
+  ARKA.reveal = {};
+  // Разбивка заголовка на буквы. Слова делятся только по обычному пробелу: неразрывный пробел (предлог + слово, «м²»)
+  // держит слова вместе. Буквы в отдельных блоках теряют кернинг шрифта — строка становится шире макета на 1–2 %;
+  // поэтому до разбивки запоминаются места букв, а после — каждой букве возвращается её кернинг (отступ в em).
+  ARKA.splitChars = function (el) {
+    if (el._split) return el._split;
+    var before = [];
+    var walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    var node, range = document.createRange();
+    while ((node = walker.nextNode())) {
+      for (var i = 0; i < node.data.length; i++) {
+        if (/\s/.test(node.data[i])) { before.push(null); continue; }
+        range.setStart(node, i); range.setEnd(node, i + 1);
+        var r = range.getBoundingClientRect();
+        before.push({ x: r.left, y: r.top });
+      }
+    }
+    var split = el._split = new window.SplitText(el, { type: 'words,chars', wordsClass: 'w', charsClass: 'c', wordDelimiter: ' ', reduceWhiteSpace: false });
+    var orig = [];
+    var k, prevGap = false;
+    before.forEach(function (b) { if (b) { orig.push({ x: b.x, y: b.y, afterGap: prevGap }); prevGap = false; } else prevGap = true; });
+    var chars = split.chars;
+    if (chars.length !== orig.length) return split;
+    var size = parseFloat(getComputedStyle(el).fontSize) || 16;
+    var now = chars.map(function (c) { return c.getBoundingClientRect().left; });
+    for (k = 1; k < chars.length; k++) {
+      if (orig[k].afterGap || Math.abs(orig[k].y - orig[k - 1].y) > 2 || chars[k].parentNode !== chars[k - 1].parentNode) continue;
+      var delta = (orig[k].x - orig[k - 1].x) - (now[k] - now[k - 1]);
+      if (Math.abs(delta) > .05) chars[k].style.marginLeft = (delta / size).toFixed(4) + 'em';
+    }
+    return split;
+  };
+  ARKA.reveal.chars = function (el, opts) {
+    if (!window.SplitText) return gsap.to(el, { opacity: 1, duration: .8 });
+    var split = ARKA.splitChars(el);
+    gsap.set(el, { opacity: 1 });
+    var step = Math.min(.05, .9 / Math.max(1, split.chars.length));
+    return gsap.fromTo(split.chars, { yPercent: 50, rotateY: 90, opacity: 0, transformPerspective: 600 }, Object.assign({ yPercent: 0, rotateY: 0, opacity: 1, duration: 1.2, ease: OUT, stagger: step }, opts || {}));
+  };
+  // Крупная надпись (ERA animateTextA): буква въезжает справа на 10 % ширины окна и откидывается из 90° по оси X
+  ARKA.reveal.accent = function (el, opts) {
+    if (!window.SplitText) return gsap.to(el, { opacity: 1, duration: .8 });
+    var split = ARKA.splitChars(el);
+    gsap.set(el, { opacity: 1 });
+    var step = Math.min(.1, 1.2 / Math.max(1, split.chars.length));
+    return gsap.fromTo(split.chars, { opacity: 0, rotateX: 90, x: 192 * U(), transformOrigin: '50% 100%', transformPerspective: 600 }, Object.assign({ opacity: 1, rotateX: 0, x: 0, duration: 1.2, ease: OUT, stagger: step }, opts || {}));
+  };
+  // Строки считаются с неразрывными пробелами: предлог не остаётся в конце строки, тире — в начале
+  ARKA.reveal.lines = function (el, opts) {
+    if (!window.SplitText) return gsap.to(el, { opacity: 1, duration: .8 });
+    var split = el._split || (el._split = new window.SplitText(el, { type: 'lines', mask: 'lines', linesClass: 'ln', wordsClass: 'lw', wordDelimiter: ' ', reduceWhiteSpace: false }));
+    gsap.set(el, { opacity: 1 });
+    return gsap.fromTo(split.lines, { yPercent: 110 }, Object.assign({ yPercent: 0, duration: 1.2, ease: OUT, stagger: .1 }, opts || {}));
+  };
+  // Подъём (ERA animateCtn): 3,333rem на компьютере = 64 px макета, 11,54 % ширины на телефоне и планшете
+  var riseY = function () { var w = document.body.clientWidth; return w >= 1024 ? 64 * U() : .1154 * w; };
+  ARKA.reveal.rise = function (els, opts) {
+    return gsap.fromTo(els, { y: riseY(), opacity: 0 }, Object.assign({ y: 0, opacity: 1, duration: 1.2, ease: OUT, stagger: .1 }, opts || {}));
+  };
+  ARKA.reveal.line = function (el, opts) {
+    return gsap.fromTo(el, { scaleY: 0, transformOrigin: '50% 0%' }, Object.assign({ scaleY: 1, opacity: 1, duration: 1.2, ease: OUT }, opts || {}));
+  };
+  ARKA.reveal['line-x'] = function (el, opts) {
+    return gsap.fromTo(el, { scaleX: 0, transformOrigin: '0% 50%' }, Object.assign({ scaleX: 1, opacity: 1, duration: 1.2, ease: OUT }, opts || {}));
+  };
+  // Один элемент по его data-anim; delay — место в группе
+  ARKA.reveal.play = function (el, delay) {
+    var f = ARKA.reveal[el.getAttribute('data-anim')];
+    if (typeof f === 'function') f(el, delay ? { delay: delay } : undefined);
+  };
+  function once(el, play) {
+    window.ScrollTrigger.create({ trigger: el, start: 'clamp(top 85%)', once: true, onEnter: play });   // clamp: элементы в самом низу страницы тоже появляются
+  }
+  function all(sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+  function start() {
+    var grouped = [];
+    all('[data-anim-group]').forEach(function (g) {
+      if (manual(g)) return;
+      var items = all('[data-anim]', g).filter(function (el) { return el.getAttribute('data-anim') !== 'arc' && el.closest('[data-anim-group]') === g; });
+      grouped = grouped.concat(items);
+      once(g, function () { items.forEach(function (el, i) { ARKA.reveal.play(el, i * .1); }); });
+    });
+    var free = function (el) { return !manual(el) && grouped.indexOf(el) < 0; };
+    all('[data-anim="chars"], [data-anim="accent"], [data-anim="lines"], [data-anim="line"], [data-anim="line-x"]').filter(free).forEach(function (el) { once(el, function () { ARKA.reveal.play(el); }); });
+    var rise = all('[data-anim="rise"]').filter(free);
+    if (rise.length) window.ScrollTrigger.batch(rise, { start: 'clamp(top 85%)', once: true, onEnter: function (batch) { ARKA.reveal.rise(batch); } });
+    // Надпись по дуге (ERA, circle-text): слова расходятся, пока шапка арки проходит экран; data-spread — размах в единицах рисунка
+    all('[data-anim="arc"]').forEach(function (svg) {
+      var text = svg.querySelector('text');
+      if (!text || manual(svg)) return;
+      var head = svg.closest('.windows__head, .ahead') || svg;
+      gsap.fromTo(text, { wordSpacing: 0 }, { wordSpacing: Number(svg.getAttribute('data-spread')) || 60, ease: 'none', scrollTrigger: { trigger: head, start: 'top bottom', end: 'bottom top', scrub: .5 } });
+    });
+    // data-speed — коллаж «Форматов»: карточки и кадр идут с разной скоростью (−8 %, 0, +8 % за проход блока, ERA)
+    Array.prototype.forEach.call(document.querySelectorAll('[data-speed]'), function (el) {
+      var sp = Number(el.getAttribute('data-speed')) || 0;
+      if (!sp || manual(el)) return;
+      window.gsap.matchMedia().add('(min-width: 1280px)', function () {   // коллаж — только в раскладке макета
+        var tw = gsap.fromTo(el, { yPercent: sp / 2 }, { yPercent: -sp / 2, ease: 'none', scrollTrigger: { trigger: el, start: 'top bottom', end: 'bottom top', scrub: .5 } });
+        return function () { tw.scrollTrigger && tw.scrollTrigger.kill(); tw.kill(); gsap.set(el, { clearProps: 'transform' }); };
+      });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-parallax]'), function (frame) {
+      var img = frame.querySelector('img, video');
+      if (!img || manual(frame)) return;
+      frame.classList.add('is-parallax');
+      gsap.fromTo(img, { yPercent: -11.54 }, { yPercent: 11.54, ease: 'none', scrollTrigger: { trigger: frame, start: 'top bottom', end: 'bottom top', scrub: .5 } });
+    });
+  }
+  // Буквы считаются после загрузки шрифтов: иначе SplitText режет строки по запасному шрифту
+  var fontsReady = document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve();
+  ARKA.ready = fontsReady.then(function () { start(); window.ScrollTrigger.refresh(); });
+  ARKA.motionReady = true;
+  window.addEventListener('load', function () { window.ScrollTrigger.refresh(); });
+  // Высота страницы изменилась уже после расчёта (подменились стили, блок вырос или стал ниже) — места появлений
+  // и закреплений пересчитываются. Без этого появления запускались по старым местам: на странице, ставшей ниже,
+  // нижняя строка подвала ждала места прокрутки, которого больше нет, и не появлялась; на ставшей выше — метки
+  // арки «Аренда» проигрывались ещё за краем окна (правки владельца 2026-10-16: «в футере пропала информация»,
+  // «отсутствует анимация в элементах», L126). Пересчёт сам меняет высоту (поля закреплений) — её и запоминаем.
+  // Пересчёт — только когда прокрутка стоит: посреди плавной прокрутки (ссылка меню, пока по дороге грузится 3D-модель
+  // и под ней появляются кнопки видов) он сбивал точку остановки — блок вставал на 86–97 px выше шапки.
+  if ('ResizeObserver' in window) {
+    var doc = document.documentElement, measuredH = 0, refreshTimer = 0;
+    var moving = function () { return !!(lenis && lenis.isScrolling) || html.classList.contains('is-locked'); };
+    var later = function () {
+      clearTimeout(refreshTimer);
+      refreshTimer = setTimeout(function () {
+        if (Math.abs(doc.scrollHeight - measuredH) < 2) return;
+        if (moving()) { later(); return; }
+        window.ScrollTrigger.refresh();
+      }, 300);
+    };
+    window.ScrollTrigger.addEventListener('refresh', function () { measuredH = doc.scrollHeight; });
+    new ResizeObserver(function () {
+      if (measuredH && Math.abs(doc.scrollHeight - measuredH) >= 2) later();
+    }).observe(document.body);
+  }
+
+  // Пришли по ссылке меню с другой страницы сайта (index.html#раздел, заставки нет — строка в <head> index.html):
+  // сразу к блоку, когда закрепления собраны (браузер прыгает к якорю раньше, чем появляются отступы закреплений).
+  var arrive = !withLoader && location.hash.length > 1 ? document.getElementById(decodeURIComponent(location.hash.slice(1))) : null;
+  if (arrive && !arrive.closest('.rent')) {
+    var moved = false;
+    var stopArrive = function () { moved = true; };
+    window.addEventListener('wheel', stopArrive, { passive: true, once: true });
+    window.addEventListener('touchstart', stopArrive, { passive: true, once: true });
+    var go = function () { if (!moved) ARKA.scrollTo(arrive, { immediate: true, force: true }); };
+    ARKA.ready.then(go);
+    window.addEventListener('load', function () { setTimeout(go, 60); });
+  }
+})();

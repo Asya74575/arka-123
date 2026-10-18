@@ -1,0 +1,413 @@
+/* Блоки главной по макету «Design 1920 · Home» (582:807) и TZ-VERSTKA.md, раздел 5.
+   Экранные блоки (первый экран, слайды «Окон») считают размеры в --s — по меньшей стороне окна,
+   остальные — в --u. Без JS и при «уменьшении движения» (нет класса has-motion) — без закреплений. */
+
+/* ---------- Появления: начальные состояния (motion.js, intro.js) ---------- */
+.js-anim [data-anim="chars"], .js-anim [data-anim="accent"], .js-anim [data-anim="lines"], .js-anim [data-anim="rise"], .js-anim [data-intro-title], .js-anim [data-intro-rise] { opacity: 0; }
+.js-anim [data-anim="line"] { transform: scaleY(0); }
+.js-anim [data-anim="line-x"] { transform: scaleX(0); }
+.arc__keep { word-spacing: 0; }   /* «зал —» на дуге не расходится: тире остаётся в вершине арки (L84) */
+.c { display: inline-block; will-change: transform, opacity; }
+.w { display: inline-block; white-space: nowrap; }
+.is-parallax img { position: relative; top: -15%; height: 130% !important; object-fit: cover; }
+/* Вступление с отступом первой строки, разбитое на строки (SplitText): отступ — только у первой строки */
+.t-intro .lw { text-indent: 0; }   /* слова при подсчёте строк не наследуют отступ */
+.t-intro > .ln-mask { text-indent: 0; }
+.t-intro > .ln-mask:first-child { text-indent: inherit; }
+
+/* ---------- 5.3. Первый экран (582:808) ---------- */
+.intro { position: relative; }
+.hero { --k: var(--s); position: relative; height: 100svh; min-height: 600px; overflow: hidden; background: #3A2E24; color: var(--light); }
+.has-motion .hero { position: sticky; top: 0; }
+.hero__photo { position: absolute; inset: 0; margin: 0; }
+.hero__photo img, .hero__video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 50%; }
+/* Видео первого экрана (hero-video.js): над обложкой — последним кадром ролика; проявляется за 0,8 с, в стыке повтора гаснет мгновенно */
+.hero__video { opacity: 0; pointer-events: none; transition: opacity .8s var(--ease-in-out); }
+.hero__photo.is-playing .hero__video { opacity: 1; }
+.hero__photo.is-instant .hero__video, .hero__photo.is-reset .hero__video { transition: none; }
+.hero__shade { position: absolute; inset: 0; pointer-events: none; }
+.hero__shade--top { bottom: auto; height: calc(240 * var(--s)); background: linear-gradient(rgb(20 16 12 / .62), rgb(20 16 12 / 0)); }
+.hero__shade--bottom { background: linear-gradient(rgb(24 18 12 / 0) 0%, rgb(24 18 12 / .5) 33%, rgb(24 18 12 / .86) 100%); }
+.hero__content { position: absolute; left: 50%; top: calc(50% - 214 * var(--s)); display: grid; justify-items: center; gap: calc(40 * var(--s)); width: max-content; max-width: calc(100% - 2 * var(--gutter)); transform: translateX(-50%); text-align: center; }
+/* Ширина заголовков — в em: 920 / 72; когда кегль упирается в минимум, строки ломаются так же, как в макете */
+.hero__title { width: 12.778em; max-width: 100%; color: var(--light); }
+.nobr { white-space: nowrap; }   /* «123 м²»: после разбивки на буквы индекс ² не уходит на следующую строку */
+.hero__facts { position: absolute; left: var(--gutter); right: var(--gutter); bottom: calc(100 * var(--s)); display: flex; align-items: center; justify-content: space-between; margin: 0; padding: 0; list-style: none; }
+.hero__fact { flex: none; min-width: calc(280 * var(--u)); color: var(--light-fact); font-weight: 500; white-space: nowrap; }   /* на 1024–1279 текст шире 280 макета — ячейка растёт, промежутки сжимаются */
+.hero__fact:nth-child(1) { text-align: right; }
+.hero__fact:nth-child(3) { text-align: center; }
+.hero__line { width: calc(280 * var(--u)); height: 1px; background: var(--line); }
+
+/* ---------- 5.4. Арка и блок «Окна» (604:3527, 604:3501, 642:423, 642:489) ----------
+   Арка — круг цвета --page, верх которого — верх блока. Блок поднимается поверх закреплённого первого экрана ровно
+   со скоростью прокрутки; перед тем, как экран слайдов встанет в окно, круг расширяется (scale .8 → 1, arch.js)
+   и закрывает углы. Надпись по дуге, метки и заголовок едут вместе с аркой. */
+.windows { position: relative; z-index: 2; overflow-x: clip; color: var(--muted); }
+.windows__shape { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+.windows__circle { position: absolute; top: 0; left: 50%; width: 125cqw; aspect-ratio: 1; margin-left: -62.5cqw; border-radius: 50%; background: var(--page); transform: scale(.8); transform-origin: 50% 0; will-change: transform; }
+.windows__rect { position: absolute; left: 0; right: 0; top: 50cqw; bottom: 0; background: var(--page); }
+.windows__head { --k: var(--s); position: relative; z-index: 1; height: calc(788 * var(--s)); }   /* как экран слайдов: на низком окне заголовок не наезжает на фото */
+.arc { position: absolute; left: 0; top: 0; width: 100%; height: auto; overflow: visible; pointer-events: none; }
+.arc text { font-family: var(--font-display); fill: var(--ink); }
+.arc--t, .arc--m { display: none; }
+.windows__mark { position: absolute; left: 50%; top: calc(224 * var(--s)); transform: translateX(-50%); white-space: nowrap; }
+.windows__title { position: absolute; left: 50%; top: calc(728 * var(--s)); width: 15.333em; transform: translateX(-50%); text-align: center; }
+
+/* Экран слайдов: 1920 × 1080 в единицах --s; по горизонтали — от центра в --u */
+.windows__pin { position: relative; z-index: 1; }
+.windows__screen { --k: var(--s); position: relative; }
+.windows__track { display: flex; flex-direction: column; }
+.slide { position: relative; height: 100svh; min-height: 600px; overflow: clip; }
+.slide__photo { position: absolute; left: 50%; top: calc(50% - 416 * var(--s)); width: calc(585 * var(--s)); height: calc(784 * var(--s)); margin: 0 0 0 calc(-292.5 * var(--s)); overflow: hidden; }
+.slide__photo img { width: 100%; height: 100%; object-fit: cover; will-change: transform; }
+.slide__title { position: absolute; left: 50%; top: calc(50% + 328 * var(--s)); width: 15.317em; transform: translateX(-50%); text-align: center; }
+/* Тексты слайда стоят у фото, а не у краёв экрана (правка владельца 2026-10-15: «отступы большие, карточка кажется разваленной»):
+   от фото до факта слева и до текста справа — --slide-pad, 80 в единице экранных блоков (было 172 и 173 по макету 604:3501).
+   Факты прижаты правым краем к фото, ширина — по самой длинной подписи; уже окна подписи переносятся, не заходя за поле. */
+.windows { --slide-pad: calc(80 * var(--s)); }
+.slide__facts { position: absolute; right: calc(50% + 292.5 * var(--s) + var(--slide-pad)); top: calc(50% - 128 * var(--s)); display: grid; gap: calc(40 * var(--s)); width: max-content; max-width: calc(50% - 292.5 * var(--s) - var(--slide-pad) - var(--gutter)); margin: 0; }
+.fact { display: grid; gap: calc(8 * var(--s)); }
+.fact dd { margin: 0; }
+.slide__desc { position: absolute; left: calc(50% + 292.5 * var(--s) + var(--slide-pad)); top: calc(50% - 166 * var(--s)); display: grid; justify-items: start; gap: calc(40 * var(--s)); width: calc(433 * var(--u)); max-width: calc(50% - 292.5 * var(--s) - var(--slide-pad) - var(--gutter)); }
+.pager { display: none; }
+
+/* С движением (≥1024): блок закрепляется, три слайда (каждый шириной в экран) едут влево за колесом (hscroll.js).
+   Шаг ленты --slide-step считает hscroll.js по содержимому (правки владельца 2026-10-15: «отступы огромные»):
+   на остановке соседний слайд — сразу за краем окна, а пока лента едет, от текста одного слайда до текста следующего —
+   около двух отступов «фото — текст», не пол-экрана. Слайды стоят внахлёст коробками (отрицательный отступ), тексты — нет.
+   Длина прокрутки — 2 шага ленты плюс по 2,5 % пауз в начале и в конце. */
+@media (min-width: 1024px) {
+  .has-motion .windows__pin { height: calc(100svh + 2 * var(--slide-step, 100cqw) / .95); }
+  .has-motion .windows__screen { position: sticky; top: 0; height: 100svh; min-height: 600px; overflow: hidden; }
+  .has-motion .windows__track { flex-direction: row; width: calc(100cqw + 2 * var(--slide-step, 100cqw)); height: 100%; will-change: transform; }
+  .has-motion .slide { flex: 0 0 100cqw; height: 100%; min-height: 0; }
+  .has-motion .slide + .slide { margin-left: calc(var(--slide-step, 100cqw) - 100cqw); }
+  .has-motion .slide { pointer-events: none; }   /* прозрачный край соседнего слайда не перехватывает щелчки */
+  .has-motion .slide > * { pointer-events: auto; }
+  .has-motion .pager { position: absolute; left: 50%; top: calc(50% + 416 * var(--s)); display: flex; align-items: center; gap: calc(24 * var(--s)); transform: translateX(-50%); }
+  .pager__arrow { position: relative; display: grid; place-items: center; width: calc(24 * var(--s)); height: calc(24 * var(--s)); min-width: 20px; min-height: 20px; padding: 0; border: 0; background: none; color: var(--ink); transition: opacity var(--dur-s) var(--ease-out); }
+  .pager__arrow::before { content: ""; position: absolute; inset: -12px; }
+  .pager__arrow svg { width: 100%; height: 100%; }
+  .pager__arrow[aria-disabled="true"] { cursor: default; }
+  .pager__track { position: relative; width: calc(300 * var(--s)); height: 1px; background: var(--line); overflow: hidden; }
+  .pager__current { position: absolute; left: 0; top: 0; width: 33.334%; height: 100%; background: var(--ink); will-change: transform; }
+  @media (hover: hover) { .pager__arrow:not([aria-disabled="true"]):hover { opacity: .6; } }
+}
+
+/* ---------- Планшет и телефон: без ленты; арка — круг шире экрана (радиус 0,75 ширины) ---------- */
+@media (max-width: 1023.98px) {
+  .windows__circle { width: 150cqw; margin-left: -75cqw; transform: none; }
+  .windows__rect { top: 75cqw; }
+  .arc--d { display: none; }
+  .arc--t { display: block; }
+  .windows__head { height: auto; padding: 128px var(--gutter) 0; text-align: center; }
+  .windows__mark { position: static; transform: none; margin-inline: auto; }
+  .windows__mark .mark__line { height: 160px; }
+  .windows__title { position: static; width: auto; max-width: 600px; margin: 48px auto 0; transform: none; }
+  .windows__pin { padding: 48px var(--gutter) 80px; }
+  .windows__track { gap: 80px; }
+  .slide { display: grid; grid-template-columns: 1fr 1fr; gap: 24px 32px; height: auto; min-height: 0; max-width: 720px; margin-inline: auto; }
+  .slide__photo, .slide__title, .slide__facts, .slide__desc { position: static; transform: none; margin: 0; }
+  .slide__photo { grid-column: 1 / -1; width: 100%; height: auto; aspect-ratio: 4 / 5; }
+  .slide__title { grid-column: 1 / -1; width: auto; margin-top: -40px; }
+  .slide__facts { grid-column: 1 / -1; grid-template-columns: 1fr 1fr; gap: 24px 32px; width: auto; max-width: none; }
+  .fact { gap: 4px; }
+  .slide__desc { grid-column: 1 / -1; width: auto; max-width: none; gap: 24px; }
+}
+@media (max-width: 767.98px) {
+  .arc--t { display: none; }
+  .arc--m { display: block; }
+  .windows__head { padding-top: 112px; }
+  .windows__mark .mark__line { height: 120px; }
+  .windows__title { margin-top: 40px; }
+  .windows__pin { padding: 40px var(--gutter) 64px; }
+  .windows__track { gap: 64px; }
+  .slide { gap: 20px 16px; }
+  .slide__title { margin-top: -28px; }
+  .slide__facts { gap: 20px 16px; }
+  .slide__desc .btn { width: 100%; }
+}
+
+/* ---------- Первый экран: планшет и телефон ---------- */
+@media (max-width: 1023.98px) {
+  .hero__photo img, .hero__video { object-position: 30% 50%; }
+  .hero__content { top: auto; bottom: calc(50% - 40px); left: var(--gutter); right: var(--gutter); width: auto; max-width: none; transform: none; gap: 32px; }
+  .hero__title { width: auto; }
+  .hero__facts { left: var(--gutter); right: var(--gutter); bottom: 40px; justify-content: center; flex-wrap: wrap; gap: 8px 24px; }
+  .hero__fact { min-width: 0; font-size: 16px; line-height: 24px; text-align: center !important; }
+  .hero__line { display: none; }
+}
+@media (max-width: 767.98px) {
+  .hero__content { bottom: auto; top: calc(var(--header-h) + max(24px, (100svh - 640px) * .35)); gap: 24px; }
+  .hero__content .btn { width: 100%; }
+  .hero__facts { flex-direction: column; gap: 4px; bottom: 24px; }
+}
+
+/* Ручные переносы заголовков макета — только на компьютере */
+@media (max-width: 1023.98px) { .br-d { display: none; } }
+
+
+/* ---------- Общая арка блоков «Форматы» и «Аренда» (5.7, 5.11): полукруг цвета --page ----------
+   Как арка «Окна» (правка владельца 2026-10-15: «анимации как во втором блоке»): на компьютере с движением предыдущий
+   блок (видео, вопросы) стоит, низом у края окна, а арка поднимается поверх него ровно со скоростью прокрутки
+   и перед концом подъёма расширяется (scale .8 → 1), закрывая углы (arch.js). */
+.ashape { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+.ashape__c { position: absolute; top: 0; left: 50%; width: 125cqw; aspect-ratio: 1; margin-left: -62.5cqw; border-radius: 50%; background: var(--page); transform: scale(.8); transform-origin: 50% 0; will-change: transform; }
+.ashape__r { position: absolute; left: 0; right: 0; top: 50cqw; bottom: 0; background: var(--page); }
+/* Блок стоит, пока верх арки не уйдёт за край окна на 0,5625 радиуса (28,125cqw): к этому месту круг расширен
+   и углы закрыты — как у первого экрана под аркой «Окна». Промежуток = экран + этот запас, арка поднята на столько же.
+   Блок встаёт низом у края окна — под ним виден только его собственный нижний отступ (100 макета); пустого поля нет
+   (правка владельца 2026-10-16: «большой отступ между видео и „Зал под ваш формат“», «отступ между FAQ и формой
+   большой», L125; было поле в 30 % высоты окна).
+   Пауза --under-hold — только у «Вопросов» (та же правка: «зафиксируй блок FAQ с достаточным отступом внизу экрана +
+   задержка скролла 1–2 с + появление блока формы»): вопросы встали целиком и стоят ещё 600 px прокрутки (≈ 6 щелчков
+   колеса, 1–2 с) — последние вопросы успевают дочитать; потом поднимается арка формы. Промежуток и подъём арки
+   длиннее на столько же. */
+.arch-gap { display: none; }
+@media (min-width: 1024px) {
+  .has-motion .under-wrap { --under-hold: 0px; }
+  .has-motion .faq-wrap { --under-hold: 600px; }
+  .has-motion .under-wrap.is-under > .arch-gap { display: block; height: calc(100svh + 28.125cqw + var(--under-hold)); }
+  .has-motion .under-wrap.is-under > [data-arch-under] { position: sticky; top: var(--under-top, 0px); }
+  .has-motion .under-wrap.is-under + [data-arch-next] { margin-top: calc(-100svh - 28.125cqw); }
+  /* Блок арки лежит поверх закреплённого блока с самого начала подъёма: его прозрачная часть и шапка арки (метки, заголовок —
+     ничего нажимаемого) щелчки не перехватывают, иначе под ними не нажимались кнопки расстановок и + / − 3D-модели и нижние
+     вопросы (2026-10-18, arka-123-a0; сама арка .ashape щелчки и раньше пропускала) */
+  .has-motion .under-wrap.is-under + [data-arch-next] { pointer-events: none; }
+  .has-motion .under-wrap.is-under + [data-arch-next] > :not(.ahead):not(.ashape) { pointer-events: auto; }
+}
+.ahead { position: relative; z-index: 1; height: calc(912 * var(--u)); }
+.ahead__mark { position: absolute; left: 50%; top: calc(225 * var(--u)); transform: translateX(-50%); white-space: nowrap; }
+.ahead__title { position: absolute; left: 50%; top: calc(728 * var(--u)); width: 15.333em; transform: translateX(-50%); text-align: center; }
+.ahead--rent { height: calc(966 * var(--u)); }
+.ahead--rent .ahead__mark { top: calc(206 * var(--u)); }
+.ahead--rent .ahead__title { top: calc(710 * var(--u)); }
+.ahead__sub { position: absolute; left: 50%; top: calc(870 * var(--u)); width: calc(760 * var(--u)); min-width: min(560px, 100% - 2 * var(--gutter)); transform: translateX(-50%); text-align: center; }
+
+/* ---------- 5.5. «О нас»: фото фасада на весь экран, текст внизу слева ---------- */
+.about-wrap { position: relative; }
+.about { --k: var(--s); position: relative; z-index: 1; height: 100svh; min-height: 600px; overflow: hidden; background: #3A2E24; }
+.about__photo { position: absolute; inset: 0; margin: 0; overflow: hidden; will-change: clip-path; }
+.about__photo img { width: 100%; height: 100%; object-fit: cover; will-change: transform; }
+.about__shade { position: absolute; inset: 0; background: linear-gradient(rgb(24 18 12 / .3), rgb(24 18 12 / .86)); }
+.about__text { position: absolute; left: var(--gutter); bottom: calc(100 * var(--s)); width: 18.475em; color: var(--white); }
+.about__spacer { display: none; }
+@media (min-width: 1024px) {
+  .has-motion .about { position: sticky; top: 0; background: var(--page); }
+  .has-motion .about__spacer { display: block; height: 100svh; }
+}
+
+/* ---------- 5.6. Видео «Наше помещение» ---------- */
+.video { position: relative; z-index: 2; padding: calc(98 * var(--u)) var(--gutter) calc(100 * var(--u)); background: var(--surface); }
+.video__title { width: 15.333em; max-width: 100%; margin: calc(100 * var(--u)) auto 0; text-align: center; }
+/* С 2026-10-18 в большой рамке блока — 3D-модель зала (room3d.css), видеопрогулка — в рамке «Форматов» (правка владельца:
+   «поменять местами видео и 3д-планирование помещения»; ведёт arka-123-a0). Кнопка плеера и пауза — у любого [data-video]. */
+.video__model { position: relative; margin: calc(42 * var(--u)) 0 0; }
+[data-video] video { display: block; width: 100%; height: 100%; object-fit: cover; cursor: pointer; }
+.video__play { position: absolute; left: 50%; top: 50%; width: max(56px, calc(80 * var(--u))); aspect-ratio: 1; padding: 0; border: 0; border-radius: 50%; background: var(--surface); color: var(--ink); transform: translate(-50%, -50%); cursor: pointer; opacity: 0; visibility: hidden; transition: opacity var(--dur-s) var(--ease-out), visibility var(--dur-s), background-color var(--dur-m) var(--ease-out); }   /* кнопка плеера — Figma 966:730: круг 80, треугольник 20 × 24 (круг — по макету владельца) */
+.video__play svg { display: block; width: 100%; height: 100%; fill: currentColor; }
+@media (hover: hover) { .video__play:hover { background: var(--accent-press); } }
+.video__play:focus-visible { outline: 2px solid var(--ink); outline-offset: 4px; }
+[data-video].is-paused .video__play { opacity: 1; visibility: visible; }
+html:not(.js) .video__play { display: none; }
+
+/* ---------- 5.7. «Форматы»: коллаж (координаты макета от центра, в --u), цена, галерея ---------- */
+.formats { position: relative; z-index: 2; padding-bottom: calc(100 * var(--u)); }
+.formats__grid { position: relative; z-index: 1; height: calc(1562 * var(--u)); }
+.formats__grid > * { position: absolute; margin: 0; }
+.formats__photo { left: calc(50% + 10 * var(--u)); top: 0; width: calc(890 * var(--u)); height: calc(596 * var(--u)); overflow: hidden; }
+/* Видеопрогулка (video.js) на месте рамки макета 700:2640: та же ширина 890, высота — по пропорциям ролика 864 × 496 (511 на 1920),
+   иначе рамка 890 × 596 срезала края кадра и зайчик у края не помещался (правка владельца 2026-10-18: «маскот полностью
+   не помещается в видео»). Крупный текст «Утром здесь пишут…» на кадр больше не заходит */
+.formats__video { height: auto; aspect-ratio: 864 / 496; background: var(--page); }
+.formats__photo img, .fcard__photo img { width: 100%; height: 100%; object-fit: cover; }
+.formats__intro { left: calc(50% - 142 * var(--u)); top: calc(567 * var(--u)); width: calc(1042 * var(--u)); }
+.formats__line { left: calc(50% + 1 * var(--u)); top: calc(727 * var(--u)); width: 1px; height: calc(402 * var(--u)); background: var(--muted); transform-origin: 50% 0; }
+.formats__body { left: calc(50% + 465 * var(--u)); top: calc(727 * var(--u)); width: calc(435 * var(--u)); }
+.fcard { display: grid; gap: calc(20 * var(--u)); width: calc(435 * var(--u)); }
+.fcard__photo { height: calc(520 * var(--u)); overflow: hidden; }
+.fcard--mk { left: calc(50% - 900 * var(--u)); top: calc(298 * var(--u)); }
+.fcard--lec { left: calc(50% - 749 * var(--u)); top: calc(950 * var(--u)); }
+.fcard--own { left: calc(50% + 465 * var(--u)); top: calc(935 * var(--u)); }
+.fcard__title { white-space: nowrap; }
+.formats__price { left: calc(50% - 141.5 * var(--u)); top: calc(1145 * var(--u)); display: grid; justify-items: center; width: calc(283 * var(--u)); text-align: center; }
+.formats__price .t-value { margin-top: calc(8 * var(--u)); }
+.formats__price .btn { margin-top: calc(40 * var(--u)); }
+/* Крупный текст → абзац → «Свой формат» идут друг за другом с отступами макета 16 и 40 (правка владельца 2026-10-15:
+   «картинка наезжает на текст»): на 1280–1600 тексты упираются в минимум (32 и 16 px) и растут — следующее идёт за ними,
+   а не стоит на своём месте макета. На 1920 места те же (567, 727, 935); выросла колонка — растёт и сетка.
+   Линия начинается под крупным текстом и кончается, как в макете, на 1129 — над «Стоимостью за час». */
+@media (min-width: 1280px) {
+  .formats__grid { display: flow-root; height: auto; min-height: calc(1562 * var(--u)); }
+  .formats__grid > .formats__intro, .formats__grid > .formats__body, .formats__grid > .fcard--own { position: relative; left: auto; top: auto; }
+  .formats__grid > .formats__intro { margin: calc(567 * var(--u)) 0 0 calc(50% - 142 * var(--u)); anchor-name: --f-intro; }
+  .formats__grid > .formats__body { margin: calc(16 * var(--u)) 0 0 calc(50% + 465 * var(--u)); }
+  .formats__grid > .fcard--own { margin: calc(40 * var(--u)) 0 0 calc(50% + 465 * var(--u)); }
+  @supports (top: anchor(--a bottom)) {
+    .formats__line { top: calc(anchor(--f-intro bottom) + 16 * var(--u)); bottom: calc(100% - 1129 * var(--u)); height: auto; }
+  }
+}
+
+.gallery { position: relative; z-index: 1; margin-top: calc(100 * var(--u)); }
+.gallery__track { display: flex; gap: calc(20 * var(--u)); padding: 0 var(--gutter); overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scroll-padding-inline: var(--gutter); scrollbar-width: none; cursor: grab; }
+.gallery__track::-webkit-scrollbar { display: none; }
+.gallery__track.is-dragging { cursor: grabbing; scroll-snap-type: none; }
+.gallery__track:focus-visible { outline-offset: -2px; }
+.gallery__item { flex: none; display: block; height: calc(596 * var(--u)); overflow: hidden; scroll-snap-align: start; }
+.gallery__item--w { width: calc(890 * var(--u)); }
+.gallery__item--n { width: calc(435 * var(--u)); }
+.gallery__item img { width: 100%; height: 100%; object-fit: cover; transition: transform var(--dur-l) var(--ease-out); -webkit-user-drag: none; user-select: none; }
+@media (hover: hover) { .gallery__item:hover img { transform: scale(1.04); } }
+.gallery__pager { display: flex; align-items: center; justify-content: center; gap: calc(24 * var(--u)); margin-top: calc(16 * var(--u)); }
+.gallery__pager .pager__arrow { position: relative; display: grid; place-items: center; width: max(24px, calc(24 * var(--u))); height: max(24px, calc(24 * var(--u))); padding: 0; border: 0; background: none; color: var(--ink); }
+.gallery__pager .pager__arrow::before { content: ""; position: absolute; inset: -12px; }
+.gallery__pager .pager__arrow svg { width: 100%; height: 100%; }
+.gallery__pager .pager__track { position: relative; width: calc(300 * var(--u)); min-width: 160px; height: 1px; background: var(--line); overflow: hidden; }
+.gallery__pager .pager__current { position: absolute; left: 0; top: 0; width: 33.334%; height: 100%; background: var(--ink); will-change: transform; }
+.gallery__hint { display: none; }
+
+/* Просмотр фото с листанием (gallery.js) */
+.viewer { position: fixed; inset: 0; z-index: 90; display: grid; grid-template-rows: 1fr auto; place-items: center; padding: calc(var(--header-h) + 8px) var(--gutter) 24px; background: rgb(51 41 32 / .94); opacity: 0; visibility: hidden; transition: opacity var(--dur-s) var(--ease-out), visibility var(--dur-s); }
+.viewer.is-open { opacity: 1; visibility: visible; }
+.viewer__img { max-width: 100%; max-height: calc(100svh - var(--header-h) - 120px); width: auto; height: auto; object-fit: contain; }
+.viewer__bar { display: flex; align-items: center; gap: 24px; margin-top: 16px; color: var(--light); }
+.viewer__count { min-width: 64px; text-align: center; }
+.viewer__btn { display: grid; place-items: center; width: 56px; height: 56px; padding: 0; border: 1px solid rgb(244 239 231 / .4); background: none; color: var(--light); transition: background-color var(--dur-m) var(--ease-out), color var(--dur-m) var(--ease-out); }
+.viewer__btn svg { width: 24px; height: 24px; }
+.viewer__close { position: absolute; top: calc((var(--header-h) - 32px) / 2); right: var(--gutter); width: 59px; height: 32px; border: 0; background: var(--light); color: var(--ink); }
+.viewer__close svg { width: 16px; height: 16px; }
+@media (hover: hover) { .viewer__btn:hover { background: var(--light); color: var(--ink); } }
+
+/* ---------- 5.8. Отзывы: зайчик слева стоит на месте, карточки 2 × 3 ---------- */
+.reviews { position: relative; z-index: 2; padding: calc(100 * var(--u)) var(--gutter) 0; background: var(--surface); }
+.reviews__title { width: 15.333em; max-width: 100%; margin: calc(100 * var(--u)) auto 0; text-align: center; }
+.reviews__body { display: grid; grid-template-columns: calc(486 * var(--u)) calc(1192 * var(--u)); column-gap: calc(101 * var(--u)); align-items: start; width: calc(1779 * var(--u)); margin: calc(40 * var(--u)) 0 0 calc(50% - 880 * var(--u)); }
+.reviews__bunny { position: sticky; top: calc(var(--header-h) + 24px); margin: 0; }
+.reviews__bunny img { width: auto; max-width: 100%; height: auto; max-height: calc(100svh - var(--header-h) - 48px); }   /* закреплённый зайчик не выше окна */
+.reviews__grid { display: grid; grid-template-columns: 1fr 1fr; gap: calc(20 * var(--u)); }
+.review { display: grid; grid-template-rows: auto 1fr auto; gap: calc(40 * var(--u)); margin: 0; padding: calc(20 * var(--u)); border: 1px solid var(--line); background: var(--surface); }
+.review__icon { width: calc(32 * var(--u)); min-width: 24px; height: auto; margin-top: calc(6 * var(--u)); margin-bottom: calc(4 * var(--u)); color: var(--line); }
+.review__quote { margin: 0; text-indent: calc(50 * var(--u)); }
+.review__quote p { margin: 0; }
+.review__author { display: grid; gap: calc(8 * var(--u)); }
+.review__name { color: var(--ink); }
+.review__event { color: var(--soft); }
+.reviews__hint { display: none; margin-top: 12px; text-align: center; color: var(--soft); }
+
+/* ---------- 5.9. «Как добраться»: строка остановок, заголовок, 3D-карта с панелью ---------- */
+.location { position: relative; z-index: 2; padding: calc(100 * var(--u)) var(--gutter) 0; background: var(--surface); }
+.route { display: flex; align-items: center; justify-content: space-between; margin: 0; padding: 0; list-style: none; }
+.route__stop { flex: none; min-width: calc(280 * var(--u)); color: var(--muted); white-space: nowrap; }
+.route__stop:nth-child(1) { text-align: right; }
+.route__stop:nth-child(3) { text-align: center; }
+.route__line { width: calc(280 * var(--u)); height: 1px; background: var(--line); }
+.location__title { width: 15.333em; max-width: 100%; margin: calc(100 * var(--u)) auto 0; text-align: center; }
+
+/* ---------- 5.10. Вопросы: список 1194 по центру ---------- */
+.faq { position: relative; z-index: 2; padding: calc(100 * var(--u)) var(--gutter) calc(100 * var(--u)); background: var(--surface); }   /* в макете 128 (28 внутри рамки + 100) — выровнено с остальными стыками */
+.faq__title { width: 15.333em; max-width: 100%; margin: calc(100 * var(--u)) auto 0; text-align: center; }
+.faq__list { width: calc(1194 * var(--u)); max-width: 100%; margin: calc(40 * var(--u)) auto 0; }
+.faq__item { border-top: 1px solid var(--line); }
+.faq__item:last-child { border-bottom: 1px solid var(--line); }
+.faq__h { margin: 0; font: inherit; }
+.faq__q { display: flex; align-items: center; justify-content: space-between; gap: calc(40 * var(--u)); width: 100%; padding: calc(24 * var(--u)) calc(12 * var(--u)); border: 0; background: none; color: var(--ink); text-align: left; }
+.faq__toggle { position: relative; flex: none; width: 56px; height: 56px; }   /* без рамки и заливки — правка владельца в макете 837:536 (2026-10-15): только знак плюс / минус */
+.faq__toggle::before, .faq__toggle::after { content: ""; position: absolute; left: 50%; top: 50%; width: 20px; height: 2px; margin: -1px 0 0 -10px; background: var(--ink); transition: opacity var(--dur-m) var(--ease-out); }
+.faq__toggle::after { transform: rotate(90deg); }
+.faq__item.is-open .faq__toggle::after { opacity: 0; }
+.faq__a { display: grid; grid-template-rows: 0fr; transition: grid-template-rows var(--dur-m) var(--ease-out); }
+.faq__a-in { min-height: 0; overflow: hidden; }
+.faq__a p { width: calc(1086 * var(--u)); max-width: 100%; margin: 0; padding: 0 0 calc(24 * var(--u)) calc(12 * var(--u)); }   /* текст ответа — 1074, как в макете, плюс отступ слева */
+.faq__a { transition: grid-template-rows var(--dur-m) var(--ease-out), margin-top var(--dur-m) var(--ease-out); }
+.faq__item.is-open .faq__a { margin-top: calc(-16 * var(--u)); }   /* ответ на 8 под вопросом, как в макете */
+.faq__item.is-open .faq__a { grid-template-rows: 1fr; }
+html:not(.js) .faq__a { grid-template-rows: 1fr; }
+
+/* ---------- 5.11. Форма аренды в арке ---------- */
+.rent-block { position: relative; z-index: 2; padding: 0 var(--gutter) calc(134 * var(--u)); }
+.rent-block .ahead { margin-inline: calc(-1 * var(--gutter)); }   /* шапка арки — во всю ширину, как сам круг */
+.rent-block__form { position: relative; z-index: 1; width: calc(800 * var(--u)); min-width: min(560px, 100%); margin: 0 auto; }
+.rent-block .form [type="submit"] { justify-self: start; width: auto; min-width: calc(290 * var(--u)); }
+
+/* «Форматы» уже 1280: коллаж с абсолютными местами тесен (текст на минимальном кегле длиннее) — две колонки потоком */
+@media (max-width: 1279.98px) {
+  .formats { padding: 0 var(--gutter) 64px; }
+  .formats .ahead { margin-inline: calc(-1 * var(--gutter)); }
+  .formats__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px 24px; height: auto; margin-top: 48px; }
+  .formats__grid > * { position: static; width: auto; height: auto; }
+  .formats__photo { grid-column: 1 / -1; aspect-ratio: 890 / 596; }
+  .formats__grid > .formats__video { position: relative; left: auto; top: auto; aspect-ratio: 864 / 496; }   /* кнопка плеера — по центру кадра, а не сетки; кадр ролика целиком */
+  .formats__intro { grid-column: 1 / -1; }
+  .formats__line { display: none; }
+  .formats__body { grid-column: 1 / -1; max-width: 640px; }
+  .fcard { width: auto; gap: 12px; }
+  .fcard__photo { height: auto; aspect-ratio: 4 / 5; }
+  .fcard__title { white-space: normal; }
+  .fcard--own { grid-column: 1 / -1; width: calc(50% - 12px); }
+  .formats__price { grid-column: 1 / -1; justify-self: center; width: auto; }
+}
+
+/* ---------- Планшет и телефон: блоки 5.5–5.11 ---------- */
+@media (max-width: 1023.98px) {
+  .ashape__c { width: 150cqw; left: -25cqw; margin-left: 0; transform: none; }
+  .ashape__r { top: 75cqw; }
+  .ahead, .ahead--rent { height: auto; padding: 128px 0 0; text-align: center; }
+  .ahead__mark, .ahead--rent .ahead__mark { position: static; transform: none; margin-inline: auto; }
+  .ahead__mark .mark__line, .mark--down .mark__line { height: 160px; }
+  .ahead__title, .ahead--rent .ahead__title { position: static; width: auto; max-width: 600px; margin: 48px auto 0; transform: none; }
+  .ahead__sub { position: static; width: auto; min-width: 0; max-width: 600px; margin: 16px auto 0; transform: none; }
+
+  .about__text { left: var(--gutter); right: var(--gutter); bottom: 48px; width: auto; max-width: 640px; }
+  .video { padding: 64px var(--gutter); }
+  .video__title, .reviews__title, .location__title, .faq__title { width: auto; max-width: 640px; margin-top: 48px; }
+  .video__model { margin-top: 32px; }
+
+  .gallery { margin: 48px calc(-1 * var(--gutter)) 0; }
+  .gallery__item--w, .gallery__item--n { height: 360px; width: auto; }
+  .gallery__item--w { aspect-ratio: 890 / 596; }
+  .gallery__item--n { aspect-ratio: 435 / 596; }
+
+  .reviews { padding: 64px var(--gutter) 0; }
+  .reviews__body { grid-template-columns: 1fr; width: auto; margin: 32px 0 0; row-gap: 24px; }
+  .reviews__bunny { position: static; width: 240px; justify-self: end; margin-bottom: -96px; }
+  .review { gap: 24px; padding: 20px; }
+  .review__icon { width: 32px; margin: 0; }
+  .review__quote { text-indent: 40px; }
+  .review__author { gap: 4px; }
+
+  .location { padding: 64px var(--gutter) 0; }
+  .route { flex-direction: column; gap: 4px; }
+  .route__stop, .route__stop:nth-child(1), .route__stop:nth-child(3) { min-width: 0; text-align: center; white-space: normal; }
+  .route__line { display: none; }
+
+  .faq { padding: 64px var(--gutter); }
+  .faq__list { width: auto; margin-top: 32px; }
+  .faq__q { gap: 16px; padding: 20px 0; }
+  .faq__a p { width: auto; padding: 0 0 20px; }
+  .faq__item.is-open .faq__a { margin-top: -8px; }
+
+  .rent-block { padding: 0 var(--gutter) 64px; }
+  .rent-block__form { width: auto; min-width: 0; max-width: 640px; margin-top: 32px; }
+}
+@media (max-width: 767.98px) {
+  .ahead, .ahead--rent { padding-top: 112px; }
+  .ahead__mark .mark__line, .mark--down .mark__line { height: 120px; }
+  .ahead__title, .ahead--rent .ahead__title { margin-top: 40px; }
+  .about__text { bottom: 32px; }
+  .video { padding: 48px var(--gutter); }
+  .formats__grid { grid-template-columns: 1fr; gap: 24px; margin-top: 40px; }
+  .fcard--own { width: auto; }
+  .formats__price .btn { width: 100%; }
+  .gallery__track { gap: 12px; }
+  .gallery__item--w, .gallery__item--n { width: 85vw; height: auto; aspect-ratio: 4 / 5; }
+  .gallery__pager { display: none; }
+  .gallery__hint { display: block; margin-top: 12px; text-align: center; color: var(--soft); }
+  .gallery::after { content: ""; position: absolute; top: 0; right: 0; width: 48px; height: calc(100% - 30px); background: linear-gradient(90deg, rgb(225 227 233 / 0), var(--page)); pointer-events: none; }
+  .reviews__bunny { width: 160px; margin-bottom: -64px; }
+  .reviews__grid { display: flex; gap: 12px; margin: 0 calc(-1 * var(--gutter)); padding: 0 var(--gutter); overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: var(--gutter); scrollbar-width: none; }
+  .reviews__grid::-webkit-scrollbar { display: none; }
+  .review { flex: none; width: 85%; scroll-snap-align: start; }
+  .reviews__hint { display: block; }
+  .faq__toggle { width: 48px; height: 48px; }
+  .rent-block .form [type="submit"] { width: 100%; }
+}

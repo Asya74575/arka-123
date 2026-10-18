@@ -1,0 +1,56 @@
+/* Страница 404 в стиле сайта (правка владельца 2026-10-15: «сверстать страницу 404»; ответ о макете — «в стиле сайта»).
+   Сюда же ведут значки мессенджеров (config.js, messengerHref), пока контакты условные. Ведёт сессия arka-123-1f.
+   Композиция: слева метка «Ошибка 404», заголовок Buyan, строка и две кнопки; справа фирменная арка — окно зала
+   с Национальной библиотекой, внизу арки «404» (как «123» в арке логотипа). Фон — как у арок главной (--page).
+   Брекпоинты сайта (L88): уже 1024 — арка над текстом, по центру; уже 768 — кнопки во всю ширину.
+   Появление при загрузке: текст поднимается по очереди, фото в арке отъезжает с 1,06 до 1 (1,2 с); при «уменьшении
+   движения» — сразу на месте. */
+
+.nf { position: relative; display: grid; align-items: center; min-height: max(640px, 100svh); padding: calc(var(--header-h) + 60 * var(--u)) var(--gutter) calc(80 * var(--u)); background: var(--page); }
+.nf__in { display: grid; grid-template-columns: minmax(0, 1fr) calc(640 * var(--u)); align-items: center; column-gap: calc(120 * var(--u)); width: calc(1560 * var(--u)); max-width: 100%; margin-inline: auto; }
+
+/* Текст */
+.nf__mark { display: flex; align-items: center; gap: 16px; margin: 0 0 max(24px, calc(40 * var(--u))); font-weight: 500; font-size: max(16px, calc(18 * var(--u))); line-height: 1.5556; color: var(--muted); }
+.nf__mark::before { content: ""; width: calc(120 * var(--u)); min-width: 48px; height: 1px; background: currentColor; }
+.nf__title { margin: 0; }
+.nf__lead { max-width: calc(640 * var(--u)); min-width: min(100%, 420px); margin: max(16px, calc(24 * var(--u))) 0 0; color: var(--muted); }
+.nf__btns { display: flex; flex-wrap: wrap; gap: 16px; margin-top: max(32px, calc(48 * var(--u))); }
+.nf__line { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+.nf__line::before { background: var(--ink); }
+@media (hover: hover) { .nf__line:hover:not(:disabled) { color: var(--light); } }
+
+/* Арка: окно зала с библиотекой, верх — полукруг на всю ширину (фирменная форма, L61) */
+.nf__arch { position: relative; width: 100%; height: min(calc(100svh - var(--header-h) - 140 * var(--u)), calc(860 * var(--u))); min-height: 420px; margin: 0; overflow: hidden; border-radius: calc(320 * var(--u)) calc(320 * var(--u)) 0 0; background: var(--line); }
+.nf__arch img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 60%; }
+.nf__arch::after { content: ""; position: absolute; inset: 0; background: linear-gradient(0deg, rgb(51 41 32 / .62) 0, rgb(51 41 32 / 0) 42%); pointer-events: none; }
+.nf__code { position: absolute; left: 0; right: 0; bottom: max(24px, calc(40 * var(--u))); z-index: 1; font-family: var(--font-display); font-weight: 400; font-size: max(64px, calc(96 * var(--u))); line-height: 1; text-align: center; color: var(--light); }
+
+/* Появление при загрузке (правило 20: не за один кадр) */
+@keyframes nf-rise { from { opacity: 0; transform: translateY(calc(48 * var(--u))); } to { opacity: 1; transform: none; } }
+@keyframes nf-photo { from { transform: scale(1.06); } to { transform: none; } }
+@keyframes nf-fade { from { opacity: 0; } to { opacity: 1; } }
+.nf__text > * { animation: nf-rise var(--dur-l) var(--ease-out) both; }
+.nf__text > :nth-child(2) { animation-delay: .1s; }
+.nf__text > :nth-child(3) { animation-delay: .2s; }
+.nf__text > :nth-child(4) { animation-delay: .3s; }
+.nf__arch { animation: nf-fade var(--dur-m) var(--ease-out) both; }
+.nf__arch img { animation: nf-photo 1.6s var(--ease-out) both; }
+.nf__code { animation: nf-rise var(--dur-l) var(--ease-out) .4s both; }
+@media (prefers-reduced-motion: reduce) { .nf__text > *, .nf__arch, .nf__arch img, .nf__code { animation: none; } }
+
+/* ---------- Уже 1024: арка над текстом, по центру ---------- */
+@media (max-width: 1023.98px) {
+  .nf { align-items: start; padding: calc(var(--header-h) + 32px) var(--gutter) 64px; }
+  .nf__in { grid-template-columns: 1fr; row-gap: 40px; width: 100%; max-width: 640px; }
+  .nf__arch { grid-row: 1; justify-self: center; width: min(100%, 420px); height: min(525px, 46svh); min-height: 240px; border-radius: 210px 210px 0 0; }   /* по высоте окна: заголовок — в первом экране */
+  .nf__text { text-align: center; }
+  .nf__mark { justify-content: center; }
+  .nf__mark::after { content: ""; width: 48px; height: 1px; background: currentColor; }
+  .nf__mark::before { width: 48px; }
+  .nf__lead { margin-inline: auto; min-width: 0; max-width: 560px; }
+  .nf__btns { justify-content: center; }
+}
+@media (max-width: 767.98px) {
+  .nf__arch { width: min(100%, 320px); height: min(400px, 40svh); border-radius: 160px 160px 0 0; }
+  .nf__btns .btn { width: 100%; }
+}

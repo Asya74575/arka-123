@@ -1,0 +1,128 @@
+/* Блок «Как добраться» (ТЗ 5.9, макет 773:2815): 3D-карта района — полёт по маршруту (assets/js/map3d/fly.js).
+   Правка владельца 2026-10-15: анимированная карта (drafts/map3d, вариант 2 «Полёт по маршруту») вместо неподвижного кадра.
+   Ведёт сессия arka-123-1f. Брекпоинты — только сайта (L88): 1280 — панель «Время в пути» в сцене или под ней,
+   1024 — подпись остановки слева внизу или снизу во всю ширину, 768 — телефон.
+   Состояния: без класса is-live — без JS и WebGL (кадр сцены картинкой, остановки и время в пути списком);
+   is-live — сцена закреплена, камера летит за прокруткой; is-reduced — «уменьшение движения» (один кадр, списки);
+   is-panel-in — панель в сцене (≥1280), is-final — конец полёта (панель выехала, карту можно крутить). */
+
+.fly { --fly-pad: max(16px, calc(40 * var(--u))); --fly-gap: max(16px, calc(40 * var(--u))); position: relative; margin-top: calc(40 * var(--u)); }
+.fly__track { position: relative; }
+.fly__stage { position: relative; overflow: hidden; background: var(--page); }
+
+/* ---------- Без JS и WebGL: кадр сцены, остановки и время в пути списком ---------- */
+.fly__still { display: block; width: 100%; height: auto; aspect-ratio: 1800 / 896; object-fit: cover; }
+.fly__view { display: none; }
+.fly__steps { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 32px 40px; margin: 0; padding: var(--fly-pad); list-style: none; }
+.fly__cap { margin: 0 0 8px; color: var(--soft); }
+.fly__h { margin: 0 0 12px; font-family: var(--font-display); font-weight: 400; font-size: max(28px, calc(40 * var(--u))); line-height: 1.2; color: var(--ink); }
+.fly__p { margin: 0; color: var(--muted); }
+.fly__btns { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 24px; }
+.fly__back { background: var(--white); color: var(--ink); box-shadow: inset 0 0 0 1px var(--line); }
+.fly__back[hidden] { display: none; }
+.fly__osm { display: none; }
+/* остановки «Листайте — пройдём…» и «Покрутите карту» — только в полёте; без него от последней остаётся кнопка */
+.fly:not(.is-live) .fly__step--intro, .fly.is-reduced .fly__step--intro { display: none; }
+.fly:not(.is-live) .fly__step--final > :not(.fly__btns), .fly.is-reduced .fly__step--final > :not(.fly__btns) { display: none; }
+.fly:not(.is-live) .fly__step--final .fly__btns, .fly.is-reduced .fly__step--final .fly__btns { margin-top: 0; }
+
+/* ---------- Панель «Время в пути»: под сценой (уже 1280, без JS, «уменьшение движения») ---------- */
+.fly__panel { margin-top: 32px; }
+.fly__panel ul { margin: 0; padding: 0; list-style: none; }
+.loc__cap { margin-bottom: 16px; color: var(--soft); }
+.loc__cap--car { margin-top: 32px; }
+.loc__walk { display: grid; grid-template-columns: 1fr 1fr; gap: calc(40 * var(--u)); }
+.loc__walk li { display: grid; grid-template-columns: auto auto 1fr; column-gap: calc(12 * var(--u)); align-items: end; }
+.loc__walk .loc__ico { width: calc(32 * var(--u)); height: calc(32 * var(--u)); min-width: 22px; min-height: 22px; margin-bottom: calc(18 * var(--u)); fill: var(--muted); }
+.loc__num { font-family: var(--font-display); color: var(--ink); }
+.loc__walk .loc__num { font-size: max(40px, calc(60 * var(--u))); line-height: 1.2; }
+.loc__walk .loc__unit { padding-bottom: calc(12 * var(--u)); color: var(--muted); }
+.loc__walk .loc__to { grid-column: 1 / -1; margin-top: calc(8 * var(--u)); color: var(--ink); }
+.loc__car li { display: flex; align-items: center; height: max(52px, calc(64 * var(--u))); border-top: 1px solid var(--line); }
+.loc__car li:last-child { border-bottom: 1px solid var(--line); }
+.loc__car .loc__to { flex: 1; color: var(--ink); }
+.loc__car .loc__ico { width: max(20px, calc(24 * var(--u))); height: max(20px, calc(24 * var(--u))); fill: var(--muted); }
+.loc__car .loc__num { width: calc(52 * var(--u)); min-width: 40px; text-align: right; font-size: max(30px, calc(40 * var(--u))); line-height: 1.2; }
+.loc__car .loc__unit { width: calc(44 * var(--u)); min-width: 36px; margin-left: 8px; color: var(--muted); }
+.loc__osm { margin-top: 24px; color: var(--soft); }
+
+/* ---------- Полёт: сцена закреплена под шапкой, камера летит за прокруткой ---------- */
+.fly.is-live .fly__track { height: 720svh; }
+.fly.is-live .fly__stage { position: sticky; top: var(--header-h); height: calc(100svh - var(--header-h) - var(--fly-gap)); min-height: 420px; }
+.fly.is-live .fly__still { display: none; }
+.fly.is-live .fly__view { display: block; position: absolute; inset: 0; touch-action: pan-y; }
+.fly__canvas { display: block; width: 100%; height: 100%; opacity: 0; transition: opacity var(--dur-m) var(--ease-out); }
+.fly.is-ready .fly__canvas { opacity: 1; }
+.fly__labels { position: absolute; inset: 0; pointer-events: none; }
+/* мягкая подложка под подписью остановки: слева внизу */
+.fly.is-live .fly__view::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(90deg, rgb(225 227 233 / .94) 0, rgb(225 227 233 / .7) 24%, rgb(225 227 233 / 0) 44%); -webkit-mask-image: linear-gradient(0deg, #000 0, #000 34%, transparent 62%); mask-image: linear-gradient(0deg, #000 0, #000 34%, transparent 62%); }
+.fly.is-live .fly__osm { display: block; position: absolute; right: var(--fly-pad); bottom: 16px; margin: 0; color: var(--soft); pointer-events: none; }
+
+/* подписи остановок: видна одна; смена — прежняя гаснет 0,4 с, новая поднимается 0,8 с */
+.fly.is-live .fly__steps { position: absolute; left: var(--fly-pad); bottom: var(--fly-pad); display: grid; grid-template-columns: 1fr; gap: 0; width: min(max(360px, calc(560 * var(--u))), 46%); padding: 0; pointer-events: none; }
+.fly.is-live .fly__step { grid-area: 1 / 1; align-self: end; opacity: 0; visibility: hidden; transform: translateY(16px); transition: opacity var(--dur-s) var(--ease-in-out), transform var(--dur-s) var(--ease-in-out), visibility 0s linear var(--dur-s); }
+.fly.is-live .fly__step.is-on { opacity: 1; visibility: visible; transform: none; pointer-events: auto; transition: opacity var(--dur-m) var(--ease-out) .15s, transform var(--dur-m) var(--ease-out) .15s, visibility 0s; }
+
+/* панель в сцене (≥1280): выезжает справа в конце полёта, как панель макета поверх карты */
+.fly.is-panel-in .fly__stage > .fly__panel { position: absolute; top: 0; right: 0; bottom: 0; z-index: 2; width: calc(704 * var(--u)); margin: 0; padding: calc(80 * var(--u)) calc(60 * var(--u)) 0 calc(118 * var(--u)); background: linear-gradient(90deg, rgb(225 227 233 / 0) 0, var(--page) calc(118 * var(--u))); transform: translateX(104%); transition: transform .9s var(--ease-out); }
+.fly.is-panel-in.is-final .fly__stage > .fly__panel { transform: none; }
+.fly.is-panel-in .fly__stage > .fly__panel .loc__cap { margin-bottom: calc(24 * var(--u)); }
+.fly.is-panel-in .fly__stage > .fly__panel .loc__cap--car { margin-top: calc(48 * var(--u)); }
+.fly.is-panel-in .fly__stage > .fly__panel .loc__osm { position: absolute; left: calc(118 * var(--u)); bottom: calc(40 * var(--u)); margin: 0; }
+/* низкое окно (ноутбук при 125 %): панель плотнее, чтобы поместилась по высоте */
+@media (max-height: 820px) {
+  .fly.is-panel-in .fly__stage > .fly__panel { padding-top: 24px; }
+  .fly.is-panel-in .fly__stage > .fly__panel .loc__cap { margin-bottom: 12px; }
+  .fly.is-panel-in .fly__stage > .fly__panel .loc__cap--car { margin-top: 20px; }
+  .fly.is-panel-in .fly__stage > .fly__panel .loc__walk { gap: 16px 32px; }
+  .fly.is-panel-in .fly__stage > .fly__panel .loc__walk .loc__ico { min-width: 20px; min-height: 20px; width: 20px; height: 20px; margin-bottom: 10px; }
+  .fly.is-panel-in .fly__stage > .fly__panel .loc__walk .loc__num { font-size: 36px; }
+  .fly.is-panel-in .fly__stage > .fly__panel .loc__walk .loc__unit { padding-bottom: 6px; }
+  .fly.is-panel-in .fly__stage > .fly__panel .loc__walk .loc__to { margin-top: 0; }
+  .fly.is-panel-in .fly__stage > .fly__panel .loc__car li { height: 44px; }
+  .fly.is-panel-in .fly__stage > .fly__panel .loc__car .loc__num { font-size: 28px; }
+  .fly.is-panel-in .fly__stage > .fly__panel .loc__osm { bottom: 16px; }
+}
+.fly.is-live.is-final:not(.is-reduced) .fly__view { cursor: grab; }
+.fly.is-dragging .fly__view { cursor: grabbing; }
+
+/* Подписи на карте (ставит fly.js каждый кадр по проекции точек сцены) — как в кадре макета */
+.fl { position: absolute; left: 0; top: 0; white-space: nowrap; transition: opacity var(--dur-s) var(--ease-in-out); will-change: transform; }
+.fl.is-off { opacity: 0; }
+.fl__plate { display: block; padding: 6px 12px; background: var(--white); font-size: max(12px, calc(14 * var(--u))); line-height: 1.4286; color: var(--ink); }
+.fl--park .fl__plate { padding: 0; background: none; color: var(--muted); }
+.fl--pin .fl__plate { padding: 10px 20px; background: var(--ink); color: var(--light); font-size: max(15px, calc(18 * var(--u))); line-height: 1.5556; font-weight: 500; }
+.fl--metro { display: flex; align-items: center; gap: 8px; }
+.fl--metro.is-flip { flex-direction: row-reverse; }
+.fl--metro.is-stack { flex-direction: column; align-items: center; }   /* телефон 320–389: «М» на точке, плашка под ним (fly.js) */
+.fl--metro .fl__m { display: grid; place-items: center; width: 32px; height: 32px; background: var(--ink); color: var(--white); font-weight: 500; }
+/* пешеход и конец пути — квадраты, как точка кадра макета (без кругов, L22) */
+.fl__walk { display: block; width: 14px; height: 14px; background: var(--ink); box-shadow: 0 0 0 3px var(--white); }
+.fl--end { width: 14px; height: 14px; }
+.fl__dot { position: absolute; inset: 0; background: var(--ink); box-shadow: 0 0 0 3px var(--white); }
+.fl__ring { position: absolute; inset: 0; border: 2px solid var(--ink); animation: fl-ring 2.4s var(--ease-in-out) infinite; }
+@keyframes fl-ring { from { transform: scale(1); opacity: .8; } to { transform: scale(3.2); opacity: 0; } }
+
+/* ---------- Уже 1024: подпись остановки снизу во всю ширину, камера отходит (fly.js) ---------- */
+@media (max-width: 1023.98px) {
+  .fly { margin-top: 32px; }
+  .fly.is-live .fly__view::after { background: linear-gradient(0deg, rgb(225 227 233 / .96) 0, rgb(225 227 233 / .8) 30%, rgb(225 227 233 / 0) 52%); -webkit-mask-image: none; mask-image: none; }
+  .fly.is-live .fly__steps { left: var(--fly-pad); right: var(--fly-pad); bottom: 40px; width: auto; }
+  .fly.is-live .fly__osm { bottom: 8px; }
+  .fl--pin .fl__plate { padding: 6px 12px; font-size: 16px; line-height: 24px; }
+}
+/* ---------- Телефон ---------- */
+@media (max-width: 767.98px) {
+  .fly__btns .btn { width: 100%; }
+  .loc__walk { gap: 24px 16px; }
+}
+
+/* ---------- Уменьшение движения: один кадр без полёта, остановки и время в пути списком ---------- */
+.fly.is-reduced .fly__track { height: auto; }
+.fly.is-reduced .fly__stage { position: relative; top: 0; height: auto; min-height: 0; overflow: visible; }
+.fly.is-reduced .fly__view { position: relative; inset: auto; height: min(calc(100svh - var(--header-h) - var(--fly-gap)), 50vw); min-height: 320px; }
+.fly.is-reduced .fly__view::after { display: none; }
+.fly.is-reduced .fly__steps { position: static; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 32px 40px; width: auto; padding: var(--fly-pad); pointer-events: auto; }
+.fly.is-reduced .fly__step { grid-area: auto; opacity: 1; visibility: visible; transform: none; transition: none; }
+.fly.is-reduced .fly__osm { display: none; }
+@media (prefers-reduced-motion: reduce) { .fl, .fl__ring { transition: none; animation: none; } }
