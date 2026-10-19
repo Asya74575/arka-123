@@ -94,7 +94,11 @@ html.lenis, html.lenis body { height: auto; }
 @media (prefers-reduced-motion: reduce) {
   .btn, .btn::before, .btn__label > span, .btn__c { transition: none !important; }
 }
-@media (max-width: 1023.98px) { .btn { height: 56px; padding: 0 32px; } }
+/* Ширина — не меньше главной кнопки «Арендовать помещение» (290 × 68 на 1920): короткие подписи («Перейти в карту»,
+   «На главную») не дают кнопку уже (правка владельца 2026-10-18: «размер кнопки маленький, не такой как на всём сайте,
+   размер кнопок в десктопе 290 × 68», L138). 35em / 3 — ширина подписи «Арендовать помещение» (210 при 18 px) + поля */
+.btn { min-width: calc(35em / 3 + 80 * var(--k)); }
+@media (max-width: 1023.98px) { .btn { height: 56px; padding: 0 32px; min-width: calc(35em / 3 + 64px); } }
 
 /* ---------- Значки мессенджеров (basil, как в макете) ---------- */
 .msg { display: inline-grid; place-items: center; flex: none; width: calc(32 * var(--k)); height: calc(32 * var(--k)); color: inherit; transition: color var(--dur-s) var(--ease-out), opacity var(--dur-s) var(--ease-out); }
@@ -212,12 +216,14 @@ html:not(.js) [data-include="header"] { position: absolute; }   /* без JS ш�
 .menu__contacts { display: grid; align-content: start; gap: max(20px, calc(24 * var(--u))); width: min-content; min-width: max(220px, calc(283 * var(--u))); flex: none; }
 .menu__caption { font-size: max(13px, calc(14 * var(--u))); line-height: 1.4286; color: var(--light-soft); }
 .menu__phone { font-family: var(--font-display); font-size: max(30px, calc(40 * var(--u))); line-height: 1.2; color: var(--light); white-space: nowrap; }
-.menu__email, .menu__address { font-size: max(20px, calc(24 * var(--u))); line-height: 1.3333; font-weight: 500; color: var(--light); }
+/* Почта и адрес — 18/28 на всех ширинах до 1920, выше растут с шириной (правка владельца 2026-10-18: «правую часть в меню
+   уменьшить, размер текста в десктопах 18 px», L136; было 24/32 макета, на ноутбуке 20) */
+.menu__email, .menu__address { font-size: max(18px, calc(18 * var(--u))); line-height: max(28px, calc(28 * var(--u))); font-weight: 500; color: var(--light); }
 .menu__msg { --msg: max(44px, calc(48 * var(--u))); display: flex; gap: calc(12 * var(--u)); margin-left: calc(-2.7 / 32 * var(--msg)); margin-left: round(calc(-2.7 / 32 * var(--msg)), 1px); color: var(--light); }
 .menu__msg .msg { width: var(--msg); height: var(--msg); }
 .menu__address { text-wrap: balance; }   /* в две строки поровну: без одного слова на второй строке */
 .menu__buttons { display: flex; flex-wrap: wrap; gap: calc(20 * var(--u)); margin-top: auto; padding-top: 32px; }
-.menu__buttons .btn { --k: var(--u); min-width: calc(290 * var(--u)); }
+.menu__buttons .btn { --k: var(--u); }   /* ширина — общее правило .btn: обе кнопки как «Арендовать помещение» (L138) */
 @media (hover: hover) {
   .menu__nav a:hover { color: var(--accent); }
   .menu__close:hover { background: var(--accent); }
@@ -228,7 +234,7 @@ html:not(.js) [data-include="header"] { position: absolute; }   /* без JS ш�
   .menu__close svg { width: 16px; height: 16px; }
   .menu__nav { gap: 10px; }   /* как подвал до 1023 */
   .menu__phone { font-size: 32px; line-height: 40px; }
-  .menu__email, .menu__address { font-size: 20px; line-height: 28px; }
+  .menu__email, .menu__address { font-size: 18px; line-height: 28px; }   /* не крупнее компьютера (шкала не растёт к узким) */
   .menu__msg { --msg: 48px; }
   .menu__buttons .btn { min-width: 260px; }
 }
@@ -347,8 +353,10 @@ html:not(.js) [data-include="header"] { position: absolute; }   /* без JS ш�
 .site-footer__logo { width: calc(260 * var(--k)); height: auto; }
 .site-footer__info { display: grid; gap: calc(12 * var(--k)); }
 /* Тексты подвала — по макету 887:753 (правка владельца 2026-10-15, L114): разделы — Buyan 24/32; юридические ссылки, почта,
-   адрес, описание и УНП — Manrope 400 16/24; до 1920 не мельче макета (целые пиксели), выше — растут с шириной. */
-.site-footer__muted { font-size: max(16px, calc(16 * var(--k))); line-height: max(24px, calc(24 * var(--k))); color: var(--soft); }
+   адрес — Manrope 400 16/24; до 1920 не мельче макета (целые пиксели), выше — растут с шириной.
+   Описание под логотипом и УНП — 14/20, как подпись «Связаться» и нижняя строка (правка владельца 2026-10-18: «уменьшить
+   размер шрифта, сейчас крупно смотрится»; в макете 16/24). */
+.site-footer__muted { font-size: max(13px, calc(14 * var(--k))); line-height: max(18px, calc(20 * var(--k))); color: var(--soft); }
 .site-footer__nav { grid-column: 4 / span 6; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: calc(20 * var(--k)); }
 .site-footer__col { display: grid; align-content: start; gap: calc(12 * var(--k)); }
 .site-footer__col a, .site-footer__email, .site-footer__address { font-size: max(16px, calc(16 * var(--k))); line-height: max(24px, calc(24 * var(--k))); font-weight: 400; color: var(--ink); text-decoration: none; transition: color var(--dur-s) var(--ease-out); }
@@ -368,13 +376,21 @@ html:not(.js) [data-include="header"] { position: absolute; }   /* без JS ш�
 .site-footer__copy { grid-column: 1 / span 3; }
 .site-footer__disclaimer { grid-column: 4 / span 6; }
 .site-footer__hours { grid-column: 11 / span 2; display: grid; gap: calc(4 * var(--k)); }
+/* «Связаться» и «Режим работы…» — левее ровно на столько, чтобы «Режим работы: каждый день 10:00–21:00» стоял в одну строку
+   (правка владельца 2026-10-18 на 1440, L136): строка — 19,4 кегля (замер Manrope — 19,13), сдвиг = строка − колонки 11–12,
+   но не ближе 48 px к колонке юридических ссылок (запас = колонка 10 + два промежутка − 48). На 1920 и шире сдвига нет, как в макете;
+   правый край — у поля, левые края обеих колонок — одна линия. % поля у элемента сетки — от ширины его области (колонки 11–12). */
+@media (min-width: 1024px) {
+  .site-footer__contacts, .site-footer__hours { margin-left: max(calc(48px - 50% - 30 * var(--k)), min(0px, calc(100% - 19.4 * max(13px, calc(14 * var(--k)))))); }
+}
+.site-footer__address { text-wrap: balance; }   /* в колонке шире прежней — две строки поровну, без «д. 10» отдельной строкой (как в меню) */
 @media (hover: hover) { .site-footer__col a:hover { color: var(--soft); } }
 @media (max-width: 1023.98px) {
   .site-footer__in { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 32px; row-gap: 40px; padding: 56px var(--gutter) 32px; }
   .site-footer__brand { grid-column: 1; width: auto; gap: 12px; }
   .site-footer__logo { width: 200px; }
   .site-footer__caption { font-size: 13px; line-height: 18px; }
-  .site-footer__muted { font-size: 16px; line-height: 24px; }
+  .site-footer__muted { font-size: 13px; line-height: 18px; }
   .site-footer__nav { grid-column: 2; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 24px; row-gap: 24px; }
   .site-footer__nav .site-footer__col:last-child { grid-column: 1 / -1; }
   .site-footer__col, .site-footer__contacts { gap: 10px; }
@@ -396,6 +412,7 @@ html:not(.js) [data-include="header"] { position: absolute; }   /* без JS ш�
   .site-footer__brand, .site-footer__nav, .site-footer__photo, .site-footer__slogan { grid-column: 1; }
   .site-footer__nav { grid-template-columns: 1fr 1fr; }
   .site-footer__photo { aspect-ratio: 4 / 3; }
+  .site-footer__photo img { object-position: 50% 20%; }   /* рамка шире кадра: арка вверху кадра остаётся целиком (2026-10-19) */
   .site-footer__slogan { font-size: 48px; letter-spacing: 1px; }
   .site-footer__slogan span + span { padding-left: 22%; }
 }

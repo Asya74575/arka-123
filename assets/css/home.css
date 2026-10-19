@@ -50,7 +50,12 @@
 .arc { position: absolute; left: 0; top: 0; width: 100%; height: auto; overflow: visible; pointer-events: none; }
 .arc text { font-family: var(--font-display); fill: var(--ink); }
 .arc--t, .arc--m { display: none; }
-.windows__mark { position: absolute; left: 50%; top: calc(224 * var(--s)); transform: translateX(-50%); white-space: nowrap; }
+/* Метка стоит от надписи по дуге, как в макете (верх дуги 131 → верх метки 224, 93 макета): надпись — рисунок во всю ширину (--u),
+   поэтому и место метки — в --u; линия короче на столько же, и до заголовка остаётся прежний зазор. На низком окне метка
+   раньше поднималась вместе с высотой окна (--s) и наезжала на «НАПРОТИВ» (правка владельца 2026-10-18: «тексты слиплись,
+   в макете отступ между данными текстами 93 px», L137) */
+.windows__mark { position: absolute; left: 50%; top: calc(224 * var(--u)); transform: translateX(-50%); white-space: nowrap; }
+.windows__mark .mark__line { height: max(48px, calc(524 * var(--s) - 224 * var(--u))); }
 .windows__title { position: absolute; left: 50%; top: calc(728 * var(--s)); width: 15.333em; transform: translateX(-50%); text-align: center; }
 
 /* Экран слайдов: 1920 × 1080 в единицах --s; по горизонтали — от центра в --u */
@@ -170,11 +175,14 @@
   .has-motion .under-wrap.is-under > .arch-gap { display: block; height: calc(100svh + 28.125cqw + var(--under-hold)); }
   .has-motion .under-wrap.is-under > [data-arch-under] { position: sticky; top: var(--under-top, 0px); }
   .has-motion .under-wrap.is-under + [data-arch-next] { margin-top: calc(-100svh - 28.125cqw); }
-  /* Блок арки лежит поверх закреплённого блока с самого начала подъёма: его прозрачная часть и шапка арки (метки, заголовок —
-     ничего нажимаемого) щелчки не перехватывают, иначе под ними не нажимались кнопки расстановок и + / − 3D-модели и нижние
-     вопросы (2026-10-18, arka-123-a0; сама арка .ashape щелчки и раньше пропускала) */
+  /* Блок арки лежит поверх закреплённого блока с самого начала подъёма. Щелчок проходит к закреплённому блоку только сквозь
+     пустую часть блока арки (над дугой, по бокам); сама нарисованная арка (.ashape__c, .ashape__r) его ловит — спрятанное под
+     ней не нажимается. Шапка арки (метки, заголовок — ничего нажимаемого) щелчки пропускает к арке под ней. Иначе прозрачная
+     шапка закрывала видимые углы закреплённого блока: + / − 3D-модели, вопросы у краёв (2026-10-18, arka-123-a0, L135) */
   .has-motion .under-wrap.is-under + [data-arch-next] { pointer-events: none; }
-  .has-motion .under-wrap.is-under + [data-arch-next] > :not(.ahead):not(.ashape) { pointer-events: auto; }
+  .has-motion .under-wrap.is-under + [data-arch-next] > :not(.ahead):not(.ashape),
+  .has-motion .under-wrap.is-under + [data-arch-next] .ashape__c,
+  .has-motion .under-wrap.is-under + [data-arch-next] .ashape__r { pointer-events: auto; }
 }
 .ahead { position: relative; z-index: 1; height: calc(912 * var(--u)); }
 .ahead__mark { position: absolute; left: 50%; top: calc(225 * var(--u)); transform: translateX(-50%); white-space: nowrap; }
@@ -184,10 +192,11 @@
 .ahead--rent .ahead__title { top: calc(710 * var(--u)); }
 .ahead__sub { position: absolute; left: 50%; top: calc(870 * var(--u)); width: calc(760 * var(--u)); min-width: min(560px, 100% - 2 * var(--gutter)); transform: translateX(-50%); text-align: center; }
 
-/* ---------- 5.5. «О нас»: фото фасада на весь экран, текст внизу слева ---------- */
+/* ---------- 5.5. «О нас»: фото зала на весь экран (до 2026-10-19 — фасад), текст внизу слева ---------- */
 .about-wrap { position: relative; }
 .about { --k: var(--s); position: relative; z-index: 1; height: 100svh; min-height: 600px; overflow: hidden; background: #3A2E24; }
 .about__photo { position: absolute; inset: 0; margin: 0; overflow: hidden; will-change: clip-path; }
+.about__photo picture { display: block; width: 100%; height: 100%; }
 .about__photo img { width: 100%; height: 100%; object-fit: cover; will-change: transform; }
 .about__shade { position: absolute; inset: 0; background: linear-gradient(rgb(24 18 12 / .3), rgb(24 18 12 / .86)); }
 .about__text { position: absolute; left: var(--gutter); bottom: calc(100 * var(--s)); width: 18.475em; color: var(--white); }
@@ -198,11 +207,11 @@
 }
 
 /* ---------- 5.6. Видео «Наше помещение» ---------- */
-.video { position: relative; z-index: 2; padding: calc(98 * var(--u)) var(--gutter) calc(100 * var(--u)); background: var(--surface); }
+.video { position: relative; z-index: 2; padding: calc(98 * var(--u)) var(--gutter) calc(60 * var(--u)); background: var(--surface); }   /* снизу 60, а не 100: рамка 3D-модели выше (правка владельца 2026-10-19, room3d.css) */
 .video__title { width: 15.333em; max-width: 100%; margin: calc(100 * var(--u)) auto 0; text-align: center; }
 /* С 2026-10-18 в большой рамке блока — 3D-модель зала (room3d.css), видеопрогулка — в рамке «Форматов» (правка владельца:
    «поменять местами видео и 3д-планирование помещения»; ведёт arka-123-a0). Кнопка плеера и пауза — у любого [data-video]. */
-.video__model { position: relative; margin: calc(42 * var(--u)) 0 0; }
+.video__model { position: relative; margin: max(32px, calc(40 * var(--u))) 0 0; }   /* от заголовка до модели — 40 на 1920 (правка владельца 2026-10-19), не меньше 32, как у других блоков на планшете и телефоне */
 [data-video] video { display: block; width: 100%; height: 100%; object-fit: cover; cursor: pointer; }
 .video__play { position: absolute; left: 50%; top: 50%; width: max(56px, calc(80 * var(--u))); aspect-ratio: 1; padding: 0; border: 0; border-radius: 50%; background: var(--surface); color: var(--ink); transform: translate(-50%, -50%); cursor: pointer; opacity: 0; visibility: hidden; transition: opacity var(--dur-s) var(--ease-out), visibility var(--dur-s), background-color var(--dur-m) var(--ease-out); }   /* кнопка плеера — Figma 966:730: круг 80, треугольник 20 × 24 (круг — по макету владельца) */
 .video__play svg { display: block; width: 100%; height: 100%; fill: currentColor; }
@@ -213,38 +222,44 @@ html:not(.js) .video__play { display: none; }
 
 /* ---------- 5.7. «Форматы»: коллаж (координаты макета от центра, в --u), цена, галерея ---------- */
 .formats { position: relative; z-index: 2; padding-bottom: calc(100 * var(--u)); }
-.formats__grid { position: relative; z-index: 1; height: calc(1562 * var(--u)); }
+.formats__grid { position: relative; z-index: 1; height: calc(1483 * var(--u)); }
 .formats__grid > * { position: absolute; margin: 0; }
 .formats__photo { left: calc(50% + 10 * var(--u)); top: 0; width: calc(890 * var(--u)); height: calc(596 * var(--u)); overflow: hidden; }
 /* Видеопрогулка (video.js) на месте рамки макета 700:2640: та же ширина 890, высота — по пропорциям ролика 864 × 496 (511 на 1920),
    иначе рамка 890 × 596 срезала края кадра и зайчик у края не помещался (правка владельца 2026-10-18: «маскот полностью
-   не помещается в видео»). Крупный текст «Утром здесь пишут…» на кадр больше не заходит */
+   не помещается в видео»). Кадр стал на 85 ниже рамки макета — весь коллаж под ним поднят на 79 (правка владельца 2026-10-18:
+   «весь остальной контент подтянуть»), а первая строка «Утром здесь пишут…» снова стоит на кадре: низ кадра — посередине букв
+   строки, как в макете. Середина прописных Buyan — 0,5 межстрочного минус 0,03 кегля от верха строки (замер по пикселям) */
 .formats__video { height: auto; aspect-ratio: 864 / 496; background: var(--page); }
 .formats__photo img, .fcard__photo img { width: 100%; height: 100%; object-fit: cover; }
-.formats__intro { left: calc(50% - 142 * var(--u)); top: calc(567 * var(--u)); width: calc(1042 * var(--u)); }
-.formats__line { left: calc(50% + 1 * var(--u)); top: calc(727 * var(--u)); width: 1px; height: calc(402 * var(--u)); background: var(--muted); transform-origin: 50% 0; }
-.formats__body { left: calc(50% + 465 * var(--u)); top: calc(727 * var(--u)); width: calc(435 * var(--u)); }
+.formats__intro { left: calc(50% - 142 * var(--u)); top: calc(890 * var(--u) * 496 / 864 - .5lh + .03em); width: calc(1042 * var(--u)); }
+.formats__line { left: calc(50% + 1 * var(--u)); top: calc(648 * var(--u)); width: 1px; height: calc(402 * var(--u)); background: var(--muted); transform-origin: 50% 0; }
+.formats__body { left: calc(50% + 465 * var(--u)); top: calc(648 * var(--u)); width: calc(435 * var(--u)); }
 .fcard { display: grid; gap: calc(20 * var(--u)); width: calc(435 * var(--u)); }
 .fcard__photo { height: calc(520 * var(--u)); overflow: hidden; }
-.fcard--mk { left: calc(50% - 900 * var(--u)); top: calc(298 * var(--u)); }
-.fcard--lec { left: calc(50% - 749 * var(--u)); top: calc(950 * var(--u)); }
-.fcard--own { left: calc(50% + 465 * var(--u)); top: calc(935 * var(--u)); }
+.fcard--mk { left: calc(50% - 900 * var(--u)); top: calc(219 * var(--u)); }
+.fcard--lec { left: calc(50% - 749 * var(--u)); top: calc(871 * var(--u)); }
+.fcard--own { left: calc(50% + 465 * var(--u)); top: calc(856 * var(--u)); }
 .fcard__title { white-space: nowrap; }
-.formats__price { left: calc(50% - 141.5 * var(--u)); top: calc(1145 * var(--u)); display: grid; justify-items: center; width: calc(283 * var(--u)); text-align: center; }
+.formats__price { left: calc(50% - 141.5 * var(--u)); top: calc(1066 * var(--u)); display: grid; justify-items: center; width: calc(283 * var(--u)); text-align: center; }
 .formats__price .t-value { margin-top: calc(8 * var(--u)); }
 .formats__price .btn { margin-top: calc(40 * var(--u)); }
 /* Крупный текст → абзац → «Свой формат» идут друг за другом с отступами макета 16 и 40 (правка владельца 2026-10-15:
    «картинка наезжает на текст»): на 1280–1600 тексты упираются в минимум (32 и 16 px) и растут — следующее идёт за ними,
-   а не стоит на своём месте макета. На 1920 места те же (567, 727, 935); выросла колонка — растёт и сетка.
-   Линия начинается под крупным текстом и кончается, как в макете, на 1129 — над «Стоимостью за час». */
+   а не стоит на своём месте макета. На 1920 места 488, 648, 856 (макет минус 79); выросла колонка — растёт и сетка.
+   Линия начинается под крупным текстом и кончается на 1050 (макет 1129 минус 79) — над «Стоимостью за час». */
 @media (min-width: 1280px) {
-  .formats__grid { display: flow-root; height: auto; min-height: calc(1562 * var(--u)); }
+  .formats__grid { display: flow-root; height: auto; min-height: calc(1483 * var(--u)); }
   .formats__grid > .formats__intro, .formats__grid > .formats__body, .formats__grid > .fcard--own { position: relative; left: auto; top: auto; }
-  .formats__grid > .formats__intro { margin: calc(567 * var(--u)) 0 0 calc(50% - 142 * var(--u)); anchor-name: --f-intro; }
+  .formats__grid > .formats__intro { margin: calc(890 * var(--u) * 496 / 864 - .5lh + .03em) 0 0 calc(50% - 142 * var(--u)); anchor-name: --f-intro; }
   .formats__grid > .formats__body { margin: calc(16 * var(--u)) 0 0 calc(50% + 465 * var(--u)); }
   .formats__grid > .fcard--own { margin: calc(40 * var(--u)) 0 0 calc(50% + 465 * var(--u)); }
+  /* «Лекция и семинар» — на одной линии со «Свой формат» (правка владельца 2026-10-19: «карточки на разной силовой линии»;
+     в макете 871 и 856, а «Свой формат» идёт за абзацем и на 1280–1600 опускается ещё ниже): карточка плывёт слева в том же
+     месте потока — верх у обеих там, где кончился абзац, + 40. Скорость параллакса у обеих одна (data-speed="8"). */
+  .formats__grid > .fcard--lec { position: relative; left: auto; top: auto; float: left; margin: calc(40 * var(--u)) 0 0 calc(50% - 749 * var(--u)); }
   @supports (top: anchor(--a bottom)) {
-    .formats__line { top: calc(anchor(--f-intro bottom) + 16 * var(--u)); bottom: calc(100% - 1129 * var(--u)); height: auto; }
+    .formats__line { top: calc(anchor(--f-intro bottom) + 16 * var(--u)); bottom: calc(100% - 1050 * var(--u)); height: auto; }
   }
 }
 
@@ -337,7 +352,7 @@ html:not(.js) .faq__a { grid-template-rows: 1fr; }
   .formats__grid > * { position: static; width: auto; height: auto; }
   .formats__photo { grid-column: 1 / -1; aspect-ratio: 890 / 596; }
   .formats__grid > .formats__video { position: relative; left: auto; top: auto; aspect-ratio: 864 / 496; }   /* кнопка плеера — по центру кадра, а не сетки; кадр ролика целиком */
-  .formats__intro { grid-column: 1 / -1; }
+  .formats__intro { grid-column: 1 / -1; position: relative; left: auto; top: auto; z-index: 1; margin-top: calc(-32px - .5lh + .03em); }   /* первая строка — на кадре видео, низ кадра посередине букв (как ≥1280) */
   .formats__line { display: none; }
   .formats__body { grid-column: 1 / -1; max-width: 640px; }
   .fcard { width: auto; gap: 12px; }
@@ -396,6 +411,7 @@ html:not(.js) .faq__a { grid-template-rows: 1fr; }
   .about__text { bottom: 32px; }
   .video { padding: 48px var(--gutter); }
   .formats__grid { grid-template-columns: 1fr; gap: 24px; margin-top: 40px; }
+  .formats__intro { margin-top: calc(-24px - .5lh + .03em); }   /* промежуток сетки здесь 24 */
   .fcard--own { width: auto; }
   .formats__price .btn { width: 100%; }
   .gallery__track { gap: 12px; }

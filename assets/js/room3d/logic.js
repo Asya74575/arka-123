@@ -65,15 +65,47 @@
     return out;
   }
   function nearestAngle(from, to) { return from + ((((to - from) % 360) + 540) % 360 - 180); }
-  // Расстояние, с которого шар радиуса radius целиком в кадре (по меньшему из углов обзора)
-  function fitDistance(fovDeg, aspect, radius) {
-    var v = fovDeg * RAD / 2, h = Math.atan(Math.tan(v) * aspect);
-    return radius / Math.sin(Math.min(v, h));
-  }
   // az: 0 — камера с юга (со стороны окон), 90 — с востока, 180 — с севера; el — наклон над полом
   function cameraPlan(target, az, el, dist) {
     var r = dist * Math.cos(el * RAD);
     return { x: target[0] + r * Math.sin(az * RAD), y: target[1] - r * Math.cos(az * RAD), h: dist * Math.sin(el * RAD) };
+  }
+  // Зал целиком в рамке (правка владельца 2026-10-18: «3D-модель не вмещается в рамку», L147). Точки габарита — углы пола
+  // внизу и на высоте потолка. frameExtent — где они на экране (−1…1 по обеим осям, как в WebGL) при камере cameraPlan,
+  // смотрящей на target на высоте lookH; fitRoom — расстояние, с которого габарит помещается в область рамки box
+  // ({ x0, x1, y0, y1 } в тех же −1…1: рамка без полей и без части под шапкой) при любом повороте (наибольшее по кругу,
+  // шаг 5°): модель при самоповороте и перетаскивании не «дышит» и не вылезает за рамку.
+  function roomPoints(P) {
+    var out = [];
+    P.floor.forEach(function (p) { out.push([p[0], p[1], 0], [p[0], p[1], P.height]); });
+    return out;
+  }
+  function frameExtent(pts, target, az, el, dist, fovDeg, aspect, lookH) {
+    var c = cameraPlan(target, az, el, dist), cx = c.x, cy = c.y, ch = c.h + lookH;
+    var fx = target[0] - cx, fy = target[1] - cy, fh = lookH - ch, fl = Math.hypot(fx, fy, fh);
+    fx /= fl; fy /= fl; fh /= fl;
+    var rx = fy, ry = -fx, rl = Math.hypot(rx, ry);   // вправо: f × (0, 0, 1)
+    rx /= rl; ry /= rl;
+    var ux = ry * fh, uy = -rx * fh, uh = rx * fy - ry * fx;   // вверх: r × f (у r нет высоты)
+    var tv = Math.tan(fovDeg * RAD / 2), e = { x0: Infinity, x1: -Infinity, y0: Infinity, y1: -Infinity, near: Infinity };
+    pts.forEach(function (p) {
+      var vx = p[0] - cx, vy = p[1] - cy, vh = p[2] - ch, z = vx * fx + vy * fy + vh * fh;
+      var x = (vx * rx + vy * ry) / (z * tv * aspect), y = (vx * ux + vy * uy + vh * uh) / (z * tv);
+      if (x < e.x0) e.x0 = x; if (x > e.x1) e.x1 = x; if (y < e.y0) e.y0 = y; if (y > e.y1) e.y1 = y; if (z < e.near) e.near = z;
+    });
+    return e;
+  }
+  function fitRoom(pts, target, el, fovDeg, aspect, box, lookH) {
+    var W = box.x1 - box.x0, H = box.y1 - box.y0, worst = 0;
+    for (var az = 0; az < 360; az += 5) {
+      var lo = 2, hi = 400;
+      for (var i = 0; i < 30; i++) {
+        var d = (lo + hi) / 2, e = frameExtent(pts, target, az, el, d, fovDeg, aspect, lookH);
+        if (e.near > 0.5 && e.x1 - e.x0 <= W && e.y1 - e.y0 <= H) hi = d; else lo = d;
+      }
+      if (hi > worst) worst = hi;
+    }
+    return worst * 1.01;   // запас на повороты между шагами
   }
   function easeInOut(t) { return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
 
@@ -149,7 +181,8 @@
 
   R.logic = {
     area: area, inside: inside, segDist: segDist, wallDist: wallDist, inward: inward, facesViewer: facesViewer,
-    footprint: footprint, overlap: overlap, fixedBoxes: fixedBoxes, nearestAngle: nearestAngle, fitDistance: fitDistance,
-    cameraPlan: cameraPlan, easeInOut: easeInOut, findPath: findPath, pathLength: pathLength, pointAt: pointAt
+    footprint: footprint, overlap: overlap, fixedBoxes: fixedBoxes, nearestAngle: nearestAngle,
+    cameraPlan: cameraPlan, roomPoints: roomPoints, frameExtent: frameExtent, fitRoom: fitRoom,
+    easeInOut: easeInOut, findPath: findPath, pathLength: pathLength, pointAt: pointAt
   };
 })(window);

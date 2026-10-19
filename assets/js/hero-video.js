@@ -60,7 +60,12 @@
   document.addEventListener('visibilitychange', sync);
 
   var half = html.classList.contains('show-loader') && document.querySelector('.loader__half--left');
-  if (half) {
+  // Заставка с 2026-10-19 короткая (шторки с 1,85 с, L150): на медленной загрузке скрипт выполняется уже после начала
+  // шторок — событие прошло, поэтому видео стартует сразу (с проявлением за 0,8 с)
+  var halfAnim = half && half.getAnimations ? half.getAnimations()[0] : null;
+  // шторки уже поехали: время анимации прошло её задержку (до начала заставки currentTime = null)
+  var halfGone = !!(halfAnim && halfAnim.effect && halfAnim.currentTime != null && halfAnim.currentTime >= halfAnim.effect.getTiming().delay);
+  if (half && !halfGone) {
     half.addEventListener('animationstart', function () { start(true); }, { once: true });
     setTimeout(function () { start(false); }, 12000);   // запасной старт, если событие шторки не пришло
   } else {

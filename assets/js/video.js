@@ -1,6 +1,6 @@
 // Видеопрогулка (задание 4; с 2026-10-18 — в рамке коллажа «Форматов», а в «Наше помещение» — 3D-модель: правка владельца
 // «поменять местами видео и 3д-планирование помещения»). Играет сама, без звука и по кругу, когда видна половина кадра, вне экрана —
-// пауза (как у ERA). Щелчок по видео — пауза и снова пуск; на паузе в углу кнопка «Смотреть» (для клавиатуры и телефона).
+// пауза (как у ERA). Щелчок по видео — пауза и снова пуск; на паузе, которую поставил посетитель, — кнопка плеера по центру.
 // «Уменьшение движения» — само не стартует.
 // Быстрый старт (правка владельца 2026-10-15: «вначале много времени уходит на загрузку видео»):
 //   — данные о ролике в начале файла; первый пуск — с кадра обложки, обложка и видео совпадают, скачка нет;
@@ -17,7 +17,13 @@
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var start = Number(video.getAttribute('data-start')) || 0;
   var userPaused = reduce, inView = false, loaded = false;
-  frame.classList.add('is-paused');
+  // Кнопка плеера видна, только когда видео остановил сам посетитель (щелчок по видео), и остаётся, пока он не запустит снова;
+  // пауза от прокрутки (вне экрана, под аркой) и ожидание первого пуска кнопку не показывают (правка владельца 2026-10-18:
+  // «при скролле значок видео появляется и исчезает… знак появляется и остаётся, когда пользователь нажмёт на видео», L139).
+  // При «уменьшении движения» видео само не стартует — кнопка видна сразу; браузер не дал запустить — тоже.
+  function mark() { frame.classList.toggle('is-paused', userPaused && video.paused); }
+  function play() { var p = video.play(); if (p && p.catch) p.catch(function () { if (video.paused) frame.classList.add('is-paused'); }); }
+  mark();
 
   function load() {
     if (loaded) return;
@@ -37,7 +43,7 @@
     return !el || frame.contains(el);
   }
   function sync() {
-    if (shown() && !userPaused) { load(); var p = video.play(); if (p && p.catch) p.catch(function () {}); }
+    if (shown() && !userPaused) { load(); play(); }
     else if (!video.paused) video.pause();
   }
   var queued = false;
@@ -47,11 +53,12 @@
     requestAnimationFrame(function () { queued = false; sync(); });
   }, { passive: true });
   video.addEventListener('play', function () { frame.classList.remove('is-paused'); });
-  video.addEventListener('pause', function () { frame.classList.add('is-paused'); });
+  video.addEventListener('pause', mark);
   function flip() {
     load();
-    if (video.paused) { userPaused = false; var p = video.play(); if (p && p.catch) p.catch(function () {}); }
+    if (video.paused) { userPaused = false; play(); }
     else { userPaused = true; video.pause(); }
+    mark();
   }
   video.addEventListener('click', flip);
   if (toggle) toggle.addEventListener('click', flip);

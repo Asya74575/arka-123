@@ -45,7 +45,9 @@
           }).join('') + '</div>' +
           '<p class="site-footer__address" data-anim="lines">' + esc(site.address) + '</p>' +
         '</div>' +
-        '<div class="site-footer__photo" data-parallax><img src="' + url('img/footer-building-520.webp') + '" srcset="' + url('img/footer-building-520.webp') + ' 520w, ' + url('img/footer-building-941.webp') + ' 941w" sizes="(max-width: 767.98px) 100vw, 260px" width="520" height="924" loading="lazy" alt="Здание АРКА 123 напротив Национальной библиотеки"></div>' +
+        // Фасад с аркой — кадр со скрина владельца 2026-10-19 (рамка 260 × 272, фото повёрнуто на 3,6°; tools/photo-hq/build-ready.py).
+        // Без параллакса: у кадра нет запаса сверху и снизу, а с параллаксом в рамке стоял бы другой кадр
+        '<div class="site-footer__photo"><img src="' + url('img/footer-facade-520.webp') + '" srcset="' + url('img/footer-facade-520.webp') + ' 520w, ' + url('img/footer-facade-1040.webp') + ' 1040w, ' + url('img/footer-facade-1262.webp') + ' 1262w" sizes="(max-width: 767.98px) 100vw, (max-width: 1023.98px) 50vw, 260px" width="1262" height="1321" loading="lazy" alt="Два дома, соединённых аркой, — здание АРКА 123"></div>' +
         '<p class="site-footer__slogan" data-anim="accent">' + slogan.map(function (s) { return '<span>' + esc(s) + '</span>'; }).join('') + '</p>' +
         '<div class="site-footer__bottom" data-anim-group>' +
           '<p class="site-footer__copy" data-anim="lines">' + esc(site.copyright) + '</p>' +

@@ -1,28 +1,45 @@
-/* Заставка (задание 1 ТЗ клиента, раскадровка Figma 576:28). Сценарий и тайминги — без изменений из прежней главной
-   (drafts/logo-animation.md, «Текущий сценарий»), цвета — новые цвета сайта (TZ-VERSTKA.md, 5.0):
-   0–3,0 с логотип по частям: знак из размытия, «АРКА 123» и слоган по буквам, как H1 первого экрана (правка владельца
-   2026-10-16, L115) → 3,15–4,3 с фото лесенками → 4,4–6,1 с зайчик в оконной раме и «АРКА 123» по буквам
-   (стоит целиком ≈ 1 с: 2026-10-15 удлинён до 2,2 с — «зайчик очень быстро сменяется», L110; 2026-10-18 короче
-   на 1,2 с — «уменьшить на 1–1,5 с задержку», L129) → 6,2–7,25 с шторки открывают первый экран. Показ — при каждом открытии главной (класс show-loader ставит скрипт в <head>, L104);
-   без JS и при «уменьшении движения» заставки нет. */
-.loader { --loader-ease: cubic-bezier(.65, 0, .35, 1); --loader-bg: var(--ink); --loader-ink: var(--light); position: fixed; inset: 0; z-index: 100; display: none; place-items: center; }
-html.show-loader .loader { display: grid; animation: loader-hide 0s 7.25s forwards; }
+/* Заставка (задание 1 ТЗ клиента), цвета сайта (TZ-VERSTKA.md, 5.0). С 2026-10-19 — один кадр ≈ 2,7 с (правка владельца:
+   «9 с это много, прелоадер не дольше 1–3 секунд… зайца убираем, а фото по краям и лого объединяем», L150):
+   в центре собирается логотип, в это же время по краям летят фото лесенками — по замеренным траекториям референса,
+   мимо логотипа:
+   0,05–0,65 с знак из размытия; с 0,15 с «АРКА 123», с 0,25 с слоган — по буквам, как H1 первого экрана (L115);
+   0,05–≈1,6 с фото слева и справа; 1,75–2,15 с логотип гаснет; 1,85–2,65 с шторки открывают первый экран; 2,7 с — конец.
+   Кадра «зайчик в оконной раме» больше нет (был 4,4–6,1 с: L110, L129); вся заставка была 7,25 с.
+   Показ — при каждом открытии главной (класс show-loader ставит скрипт в <head>, L104); без JS и при «уменьшении движения»
+   заставки нет. Время шторок знают intro.js (заголовок и прокрутка) и hero-video.js (старт видео — по animationstart). */
+.loader { --loader-ease: cubic-bezier(.65, 0, .35, 1); --loader-bg: var(--ink); --loader-ink: var(--light); position: fixed; inset: 0; z-index: 100; display: none; place-items: center; overflow: hidden; }
+html.show-loader .loader { display: grid; animation: loader-hide 0s 2.7s forwards; }
 .loader__half { position: absolute; top: 0; bottom: 0; width: 50%; background: var(--loader-bg); z-index: 0; will-change: transform; }
-.loader__half--left { left: 0; animation: half-out-left 1s var(--loader-ease) 6.2s forwards; }
-.loader__half--right { right: 0; animation: half-out-right 1s var(--loader-ease) 6.2s forwards; }
-/* Карточки: пять на сторону, по замеренным траекториям референса (review/refs/premium-preloader/track-positions.json) */
+.loader__half--left { left: 0; animation: half-out-left .8s var(--loader-ease) 1.85s forwards; }
+.loader__half--right { right: 0; animation: half-out-right .8s var(--loader-ease) 1.85s forwards; }
+/* Карточки: пять на сторону, по замеренным траекториям референса (review/refs/premium-preloader/track-positions.json):
+   левая лесенка идёт снизу слева вверх, правая — сверху справа вниз, обе — мимо логотипа. Ход и скорость прежние (2,6 с),
+   старт — вместе со знаком логотипа; последнее фото уходит за край к 1,7 с. --dx-l / --dx-r — сдвиг лесенок наружу, чтобы
+   фото не заходили под логотип: на компьютере левая лесенка на 2vw левее, на телефоне обе — к краям экрана, фото и логотип
+   там меньше (замер зазоров по времени — tools/checks/pravki-2026-10-19-loader.mjs). */
 .loader__cards { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
-.loader__card { --t0: 3.2s; position: absolute; top: 0; left: 0; width: clamp(100px, 16.7vw, 240px); max-width: none; aspect-ratio: 4 / 5; object-fit: cover; border-radius: 999px 999px 0 0; opacity: 0;   /* без обводки — правка владельца 2026-10-16 (L122) */ will-change: transform, opacity; }
-.loader__card--l0 { animation: card-l0 2.6s linear var(--t0) both, card-in .5s ease-out var(--t0) both; }
-.loader__card--l2 { animation: card-l2 2.6s linear var(--t0) both, card-in .5s ease-out var(--t0) both; }
-.loader__card--l4 { animation: card-l4 2.6s linear var(--t0) both, card-in .5s ease-out var(--t0) both; }
-.loader__card--l6 { animation: card-l6 2.6s linear var(--t0) both, card-in .5s ease-out var(--t0) both; }
-.loader__card--l8 { animation: card-l8 2.6s linear var(--t0) both, card-in .5s ease-out var(--t0) both; }
-.loader__card--r0 { animation: card-r0 2.6s linear var(--t0) both, card-in .5s ease-out var(--t0) both; }
-.loader__card--r2 { animation: card-r2 2.6s linear var(--t0) both, card-in .5s ease-out var(--t0) both; }
-.loader__card--r4 { animation: card-r4 2.6s linear var(--t0) both, card-in .5s ease-out var(--t0) both; }
-.loader__card--r6 { animation: card-r6 2.6s linear var(--t0) both, card-in .5s ease-out var(--t0) both; }
-.loader__card--r8 { animation: card-r8 2.6s linear var(--t0) both, card-in .5s ease-out var(--t0) both; }
+.loader__card { --t0: .05s; --d: 2.6s; position: absolute; top: 0; left: 0; width: clamp(100px, 16.7vw, 240px); max-width: none; aspect-ratio: 4 / 5; object-fit: cover; border-radius: 999px 999px 0 0; opacity: 0;   /* без обводки — правка владельца 2026-10-16 (L122) */ will-change: transform, opacity; }
+.loader { --dx-l: calc(-2vw - max(0px, 120px - 15vh)); --dx-r: 0px; }   /* на низком окне фото выше по отношению к окну — левее ещё */
+.loader__card[class*="--l"] { translate: var(--dx-l) 0; }
+.loader__card[class*="--r"] { translate: var(--dx-r) 0; }
+@media (max-width: 767.98px) {
+  .loader { --dx-l: min(0px, calc(23vw - 138px)); --dx-r: max(0px, calc(164px - 23.3vw)); }
+  .loader__card { width: clamp(80px, 16.7vw, 128px); }
+}
+@media (max-width: 479.98px) {
+  .loader { --dx-l: min(0px, calc(50vw - 241px)); --dx-r: max(0px, calc(142px - 23vw)); }
+  .loader .loader__logo { width: 260px; }   /* правило логотипа ниже — с более слабым селектором */
+}
+.loader__card--l0 { animation: card-l0 var(--d) linear var(--t0) both, card-in .4s ease-out var(--t0) both; }
+.loader__card--l2 { animation: card-l2 var(--d) linear var(--t0) both, card-in .4s ease-out var(--t0) both; }
+.loader__card--l4 { animation: card-l4 var(--d) linear var(--t0) both, card-in .4s ease-out var(--t0) both; }
+.loader__card--l6 { animation: card-l6 var(--d) linear var(--t0) both, card-in .4s ease-out var(--t0) both; }
+.loader__card--l8 { animation: card-l8 var(--d) linear var(--t0) both, card-in .4s ease-out var(--t0) both; }
+.loader__card--r0 { animation: card-r0 var(--d) linear var(--t0) both, card-in .4s ease-out var(--t0) both; }
+.loader__card--r2 { animation: card-r2 var(--d) linear var(--t0) both, card-in .4s ease-out var(--t0) both; }
+.loader__card--r4 { animation: card-r4 var(--d) linear var(--t0) both, card-in .4s ease-out var(--t0) both; }
+.loader__card--r6 { animation: card-r6 var(--d) linear var(--t0) both, card-in .4s ease-out var(--t0) both; }
+.loader__card--r8 { animation: card-r8 var(--d) linear var(--t0) both, card-in .4s ease-out var(--t0) both; }
 @keyframes card-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes card-l0 {
   0.000% { transform: translate3d(-9.444vw, 51.778vh, 0); }
@@ -707,27 +724,17 @@ html.show-loader .loader { display: grid; animation: loader-hide 0s 7.25s forwar
 
 @keyframes half-out-left { to { transform: translateX(-100%); } }
 @keyframes half-out-right { to { transform: translateX(100%); } }
-@keyframes focus-in { from { opacity: 0; filter: blur(12px); } to { opacity: 1; filter: none; } }
-@keyframes focus-out { to { opacity: 0; filter: blur(10px); } }
 @keyframes reveal-soft { from { opacity: 0; filter: blur(5px); } to { opacity: 1; filter: none; } }
 @keyframes fade-soft { to { opacity: 0; filter: blur(5px); } }
 @keyframes loader-hide { to { visibility: hidden; } }
-/* Логотип и маскот стоят в одной ячейке и сменяют друг друга */
 .loader__stage { position: relative; z-index: 2; display: grid; place-items: center; }
-.loader__stage > * { grid-area: 1 / 1; }
-/* Логотип из трёх частей (лок-ап из макета): знак-арка проявляется из размытия 5 px за 0,625 с; «АРКА 123» с 0,7 с
-   и слоган с 1,2 с — по буквам (.loader__ch ниже). Логотип стоит целиком до 3,0 с и гаснет с размытием за 0,5 с. */
+/* Логотип из трёх частей (лок-ап из макета): знак-арка проявляется из размытия 5 px за 0,6 с; «АРКА 123» с 0,15 с
+   и слоган с 0,25 с — по буквам (к 1,75 с последняя буква на 99,5 %) (.loader__ch ниже). Логотип стоит целиком до 1,75 с и гаснет с размытием за 0,4 с. */
 .loader__logo { position: relative; width: clamp(300px, 36vw, 520px); aspect-ratio: 843 / 300; }
 .loader__part { position: absolute; display: block; max-width: none; height: auto; opacity: 0; filter: blur(5px); }
-.loader__part--arch { left: 0.356%; top: 1.333%; width: 29.893%; animation: reveal-soft .625s ease-out .2s both, fade-soft .5s ease-in-out 3s forwards; }
-.loader__part--name { --t: .7s; left: 33.571%; top: 27%; width: 65.955%; aspect-ratio: 556 / 97; animation: fade-soft .5s ease-in-out 3s forwards; }
-.loader__part--slogan { --t: 1.2s; left: 33.571%; top: 64.667%; width: 64.887%; aspect-ratio: 547 / 87; animation: fade-soft .5s ease-in-out 3s forwards; }
-.loader__lockup { display: flex; flex-direction: column; align-items: center; gap: clamp(8px, 1vw, 14px); }
-/* Зайчик в оконной раме: рама — цвет линий сайта, фон окна — цвет арок. Рама тонкая — 6 px на 1920 (было 19: правка
-   владельца 2026-10-16 «обводка огромная, массивная», L122) */
-.loader__bunny { box-sizing: border-box; width: clamp(150px, 19vw, 240px); aspect-ratio: 4 / 5; overflow: hidden; border-radius: 999px 999px 0 0; border: clamp(4px, .3125vw, 6px) solid var(--line); background: var(--page); opacity: 0; filter: blur(12px); animation: focus-in .7s ease-out 4.4s both, focus-out .5s ease-in-out 6.1s forwards; }
-.loader__bunny img { display: block; width: 100%; height: 100%; object-fit: cover; }
-.loader__word { --t: 4.55s; position: relative; display: block; width: clamp(150px, 26vw, 260px); aspect-ratio: 556 / 97; animation: focus-out .5s ease-in-out 6.15s forwards; }
+.loader__part--arch { left: 0.356%; top: 1.333%; width: 29.893%; animation: reveal-soft .6s ease-out .05s both, fade-soft .4s ease-in-out 1.75s forwards; }
+.loader__part--name { --t: .15s; left: 33.571%; top: 27%; width: 65.955%; aspect-ratio: 556 / 97; animation: fade-soft .4s ease-in-out 1.75s forwards; }
+.loader__part--slogan { --t: .25s; left: 33.571%; top: 64.667%; width: 64.887%; aspect-ratio: 547 / 87; animation: fade-soft .4s ease-in-out 1.75s forwards; }
 /* Надписи по буквам — как H1 первого экрана (motion.js, reveal.chars; шаг 0,02 с — intro.js): буква поднимается на полвысоты
    своей строки, разворачивается из 90° по вертикальной оси (перспектива 600 px) и проявляется — 1,2 с, кривая arkaOut
    (.25, 1, .5, 1), волна слева направо. Буква — свой SVG во всю рамку надписи; поворот — вокруг центра буквы и середины

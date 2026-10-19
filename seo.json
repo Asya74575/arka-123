@@ -54,6 +54,10 @@
       "title": "Страница не найдена",
       "noindex": true
     },
+    "spasibo.html": {
+      "title": "Спасибо за заявку — АРКА 123",
+      "noindex": true
+    },
     "legal/privacy.html": {
       "title": "Политика обработки персональных данных",
       "noindex": true

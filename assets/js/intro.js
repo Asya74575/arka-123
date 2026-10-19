@@ -8,14 +8,19 @@
   var gsap = window.gsap;
   var html = document.documentElement;
   var withLoader = html.classList.contains('show-loader');
-  var delay = withLoader ? 6.35 : .2;   // шторки заставки — с 6,2 с (loader.css; 2026-10-18 кадр с зайчиком на 1,2 с короче — L129)
+  var delay = withLoader ? 2 : .2;   // шторки заставки — с 1,85 с (loader.css; 2026-10-19 заставка ≈ 2,7 с без кадра с зайчиком — L150)
   if (withLoader) {
+    // Отсчёт — от начала заставки, а не от запуска этого скрипта: пока грузится страница, он выполняется на 0,3–0,6 с позже
+    var la = document.querySelector('.loader');
+    var an = la && la.getAnimations ? la.getAnimations()[0] : null;
+    var past = an && an.startTime != null && document.timeline ? Math.max(0, (document.timeline.currentTime - an.startTime) / 1000) : 0;
+    delay = Math.max(.2, delay - past);
     if (ARKA.lenis) ARKA.lenis.stop();
     html.classList.add('is-locked');
     setTimeout(function () {
       html.classList.remove('is-locked');
       if (ARKA.lenis) ARKA.lenis.start();
-    }, 6700);
+    }, Math.max(0, 2350 - past * 1000));
   }
   var title = hero.querySelector('[data-intro-title]');
   var rise = hero.querySelectorAll('[data-intro-rise]');

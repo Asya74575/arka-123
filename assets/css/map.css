@@ -95,13 +95,15 @@
 .fl--metro { display: flex; align-items: center; gap: 8px; }
 .fl--metro.is-flip { flex-direction: row-reverse; }
 .fl--metro.is-stack { flex-direction: column; align-items: center; }   /* телефон 320–389: «М» на точке, плашка под ним (fly.js) */
-.fl--metro .fl__m { display: grid; place-items: center; width: 32px; height: 32px; background: var(--ink); color: var(--white); font-weight: 500; }
-/* пешеход и конец пути — квадраты, как точка кадра макета (без кругов, L22) */
-.fl__walk { display: block; width: 14px; height: 14px; background: var(--ink); box-shadow: 0 0 0 3px var(--white); }
-.fl--end { width: 14px; height: 14px; }
-.fl__dot { position: absolute; inset: 0; background: var(--ink); box-shadow: 0 0 0 3px var(--white); }
-.fl__ring { position: absolute; inset: 0; border: 2px solid var(--ink); animation: fl-ring 2.4s var(--ease-in-out) infinite; }
-@keyframes fl-ring { from { transform: scale(1); opacity: .8; } to { transform: scale(3.2); opacity: 0; } }
+.fl--metro .fl__m { display: block; flex: none; width: 32px; height: 32px; }   /* знак минского метро — красная «М» в круге (fly.js, METRO) */
+/* Пешеход и конец пути — маскот (правка владельца 2026-10-18: «замени квадрат-указатель на маскота»): подошвы на точке пути
+   (fly.js, ay), высота 72 макета, не ниже 48 px; поворот по ходу — 0,4 с, подскок на ходу ставит fly.js */
+.fl--bunny { pointer-events: none; }
+.fl__hop { display: block; transform-origin: 50% 95.77%; }   /* масштаб по дальности (fly.js) — вокруг подошв */
+.fl--end .fl__hop { transform-origin: 50% 96.41%; }
+.fl--walker.is-behind:not(.is-off) { opacity: .35; }   /* за домом — прозрачный, как путь за домами */
+.fl__bunny { display: block; width: auto; height: max(48px, calc(72 * var(--u))); aspect-ratio: 769 / 1490; transition: transform .4s var(--ease-in-out); user-select: none; -webkit-user-drag: none; }
+.fl--end .fl__bunny { aspect-ratio: 843 / 1477; }
 
 /* ---------- Уже 1024: подпись остановки снизу во всю ширину, камера отходит (fly.js) ---------- */
 @media (max-width: 1023.98px) {
@@ -125,4 +127,4 @@
 .fly.is-reduced .fly__steps { position: static; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 32px 40px; width: auto; padding: var(--fly-pad); pointer-events: auto; }
 .fly.is-reduced .fly__step { grid-area: auto; opacity: 1; visibility: visible; transform: none; transition: none; }
 .fly.is-reduced .fly__osm { display: none; }
-@media (prefers-reduced-motion: reduce) { .fl, .fl__ring { transition: none; animation: none; } }
+@media (prefers-reduced-motion: reduce) { .fl, .fl__bunny { transition: none; animation: none; } }

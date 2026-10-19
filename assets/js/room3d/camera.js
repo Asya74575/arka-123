@@ -1,29 +1,44 @@
 // 3D-модель зала (задание 3, drafts/room-3d.md): камера. Поворот — перетаскиванием мышью и горизонтальным свайпом,
 // наклон 22°–65° — мышью вверх-вниз, стрелки влево и вправо — с клавиатуры. До первого касания модель медленно
-// поворачивается сама (оборот за 80 с); кнопки видов перелетают к ракурсу за 1,4 с. Вертикальный свайп на телефоне
+// поворачивается сама (оборот за 80 с); табы расстановок и «Вернуть вид» — перелёт к ракурсу за 1,4 с. Вертикальный свайп на телефоне
 // листает страницу: у холста touch-action: pan-y (room3d.css), такой жест браузер сам отдаёт прокрутке.
 // Приближение (правка владельца 2026-10-16: «крутить, увеличивать, уменьшать»; выбор владельца — кнопки + / − и Ctrl + колесо):
 // кнопки + / − на модели (ui.js) и клавиши + / − — шаг ×0,8 / ×1,25 за 0,4 с; колесо с Ctrl (⌘) и щипок на тачпаде —
 // плавно; на телефоне — двумя пальцами. Обычное колесо листает страницу, а не модель. Приближение — свой множитель uz
-// от 0,5 (вдвое ближе) до 1,4; выбор вида возвращает его к 1 — ракурс вида как в макете.
+// от 0,5 (вдвое ближе) до 1,4; выбор вида возвращает его к 1.
+// Зал целиком в рамке (правка владельца 2026-10-18: «при скролле 3D-модель не вмещается в рамку», L147): расстояние —
+// L.fitRoom по габариту зала, рамке и наклону при любом повороте; область для зала — рамка без полей (по 2,5 % ширины
+// по бокам, по 4 % высоты сверху и снизу) и без полос под кнопками масштаба и шапкой (main.js → setInsets). Середина
+// зала на экране — всегда в середине этой области (смещение кадра setViewOffset). Камера смотрит на середину зала;
+// вид задаёт только поворот и наклон. Приближение uz — от этого вписанного расстояния.
 (function (w) {
   var R = w.Room3D, L = R.logic, P = R.plan;
-  var EL_MIN = 22, EL_MAX = 65, RADIUS = 8.7, AUTO = 360 / 80, LOOK_H = 0.6, UZ_MIN = 0.5, UZ_MAX = 1.4;
+  var EL_MIN = 22, EL_MAX = 65, AUTO = 360 / 80, LOOK_H = 0.6, UZ_MIN = 0.5, UZ_MAX = 1.4, MX = 0.025, MY = 0.04;
+  var PTS = L.roomPoints(P), fits = {}, box = { x0: -1 + 2 * MX, x1: 1 - 2 * MX, y0: -1 + 2 * MY, y1: 1 - 2 * MY };
+  function fitFor(fov, aspect, el) {   // расстояние «зал целиком» — по рамке, области и наклону (наклон с шагом 0,5°)
+    var k = [fov, aspect.toFixed(3), box.x0.toFixed(3), box.x1.toFixed(3), box.y0.toFixed(3), box.y1.toFixed(3), Math.round(el * 2)].join('|');
+    if (!fits[k]) fits[k] = L.fitRoom(PTS, P.center, Math.round(el * 2) / 2, fov, aspect, box, LOOK_H);
+    return fits[k];
+  }
   var clampUz = function (v) { return Math.max(UZ_MIN, Math.min(UZ_MAX, v)); };
 
   R.createRig = function (camera, el, opts) {
-    var s = { az: 0, el: 40, tx: P.center[0], ty: P.center[1], zoom: 1, uz: 1 };
+    var s = { az: 0, el: 40, tx: P.center[0], ty: P.center[1], uz: 1 };
     var fly = null, zfly = null, auto = !opts.reduced, drag = null, pinch = null, dirty = true, touched = false;
     var points = {};   // пальцы и мышь на холсте: id → { x, y }
     function interact() { auto = false; if (!touched) { touched = true; if (opts.onInteract) opts.onInteract(); } }
     function zoomed() { if (opts.onZoom) opts.onZoom(s.uz <= UZ_MIN + 1e-3, s.uz >= UZ_MAX - 1e-3); }
     function apply() {
-      var p = L.cameraPlan([s.tx, s.ty], s.az, s.el, L.fitDistance(camera.fov, camera.aspect, RADIUS) * s.zoom * s.uz * (camera.aspect > 4 / 3 ? P.wideZoom || 1 : 1));
+      var d = fitFor(camera.fov, camera.aspect, s.el) * s.uz, p = L.cameraPlan([s.tx, s.ty], s.az, s.el, d);
       camera.position.copy(R.toWorld(p.x, p.y, p.h + LOOK_H));
       camera.lookAt(R.toWorld(s.tx, s.ty, LOOK_H));
+      // середина зала на экране — в середину области для зала. Кадр — 2a × 2 (a — пропорции рамки): setViewOffset ставит
+      // камере aspect = ширина / высота кадра, с кадром 2 × 2 модель растягивалась по ширине
+      var a = camera.aspect, e = L.frameExtent(PTS, [s.tx, s.ty], s.az, s.el, d, camera.fov, a, LOOK_H);
+      camera.setViewOffset(2 * a, 2, (e.x0 + e.x1 - box.x0 - box.x1) / 2 * a, -(e.y0 + e.y1 - box.y0 - box.y1) / 2, 2 * a, 2);
     }
     function flyTo(v, ms) {
-      var to = { az: L.nearestAngle(s.az, v.az), el: v.el, tx: v.target[0], ty: v.target[1], zoom: v.zoom || 1, uz: v.uz != null ? v.uz : 1 }, k;
+      var to = { az: L.nearestAngle(s.az, v.az), el: v.el, tx: P.center[0], ty: P.center[1], uz: v.uz != null ? v.uz : 1 }, k;
       zfly = null;
       if (!ms) { for (k in to) s[k] = to[k]; fly = null; dirty = true; zoomed(); return; }
       var from = {};
@@ -86,7 +101,7 @@
       }
       if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
       e.preventDefault(); interact();
-      flyTo({ az: s.az + (e.key === 'ArrowLeft' ? 20 : -20), el: s.el, target: [s.tx, s.ty], zoom: s.zoom, uz: s.uz }, opts.reduced ? 0 : 400);
+      flyTo({ az: s.az + (e.key === 'ArrowLeft' ? 20 : -20), el: s.el, uz: s.uz }, opts.reduced ? 0 : 400);
     });
     function update(dt) {
       if (fly) {
@@ -112,6 +127,12 @@
       zoomOut: function () { zoomTo((zfly ? zfly.to : s.uz) * 1.25, opts.reduced ? 0 : 400); },
       uz: function () { return s.uz; },
       apply: function () { apply(); dirty = false; },
+      // поля рамки, занятые кнопками и шапкой (доли ширины и высоты, 0…0,4): зал вписывается в остальное
+      setInsets: function (i) {
+        var c = function (v) { return Math.max(0, Math.min(0.4, v || 0)); };
+        var nb = { x0: -1 + 2 * (MX + c(i.l)), x1: 1 - 2 * (MX + c(i.r)), y0: -1 + 2 * (MY + c(i.b)), y1: 1 - 2 * (MY + c(i.t)) };
+        if (['x0', 'x1', 'y0', 'y1'].some(function (k) { return Math.abs(nb[k] - box[k]) > 1e-3; })) { box = nb; dirty = true; }
+      },
       planPos: function () { return [camera.position.x + P.center[0], P.center[1] - camera.position.z]; },
       busy: function () { return !!fly; },
       az: function () { return s.az; }

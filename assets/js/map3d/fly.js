@@ -297,11 +297,78 @@
     let stageW = 1, stageH = 1;
     const toScreen = (x, y, z) => { v3.set(x, y, z).project(camera); return [(v3.x + 1) / 2 * stageW, (1 - v3.y) / 2 * stageH, v3.z]; };
     const mk = (cls, html) => { const d = document.createElement('div'); d.className = 'fl is-off ' + cls; d.innerHTML = html; labelsEl.appendChild(d); return d; };
+    // Маскот вместо квадрата-указателя (правка владельца 2026-10-18; картинки — tools/map3d/bunny.py): по пути идёт зайчик
+    // «шагает», у входа в дом — зайчик «привет». Точка пути — под подошвами (ay — доля высоты картинки, где подошвы, из bunny.py).
+    // Шагающий смотрит туда, куда идёт по экрану (поворот 0,4 с в CSS), на ходу чуть подпрыгивает; стоит — не прыгает.
+    // Размер — как у предмета сцены: зайчик ростом BUNNY_M метров в проекции, но не крупнее картинки (72 макета) и не мельче 32 px —
+    // на общем плане он не в полбашни. За домом шагающий становится прозрачным, как сам путь за домами; конец пути за домом —
+    // зайчик «привет» встаёт на последнюю видимую точку пути (у угла дома), а не поверх стены.
+    const BUNNY_M = 20, BUNNY_MIN = 32;
+    const bunny = (pose) => `<span class="fl__hop"><img class="fl__bunny" src="img/map-bunny-${pose}-120.webp" srcset="img/map-bunny-${pose}-120.webp 1x, img/map-bunny-${pose}-240.webp 2x" width="${pose === 'walk' ? 62 : 68}" height="120" alt="" draggable="false"></span>`;
+    const walkerEl = mk('fl--walker fl--bunny', bunny('walk')), endEl = mk('fl--end fl--bunny', bunny('hello'));
+    const hopEl = walkerEl.firstChild, faceEl = hopEl.firstChild, endHopEl = endEl.firstChild;
+    const ray = new T.Raycaster(), rFrom = new T.Vector3(), rDir = new T.Vector3();
+    let occluders = null;
+    const seen = (x, z) => {   // точка пути (1,5 м над землёй) не закрыта домом
+      occluders = occluders || scene.children.filter((o) => o.isMesh && o.castShadow && !o.isInstancedMesh);
+      rFrom.copy(camera.position); rDir.set(x, 1.5, z).sub(rFrom);
+      const dist = rDir.length(); ray.set(rFrom, rDir.normalize()); ray.far = Math.max(0, dist - 1.5);
+      return ray.intersectObjects(occluders, false).length === 0;
+    };
+    const bunnyScale = (el, x, z, ay) => {   // масштаб вокруг подошв: рост BUNNY_M метров на экране, в пределах [32 px; картинка]
+      const i = LB.findIndex((l) => l.el === el), h0 = (sizes[i] && sizes[i][1]) || 72;
+      const px = toScreen(x, 1, z)[1] - toScreen(x, 1 + BUNNY_M, z)[1];
+      return Math.min(1, Math.max(BUNNY_MIN / h0, px / h0));
+    };
+    // где стоит знак метро с плашкой (значок на точке выхода, плашка справа, слева или под ним) — по месту прошлого кадра
+    const metroBox = () => {
+      if (metroEl.classList.contains('is-off')) return null;
+      const o = labelsEl.getBoundingClientRect(), r = metroEl.getBoundingClientRect();
+      return [r.left - o.left, r.top - o.top, r.right - o.left, r.bottom - o.top];
+    };
+    let walkPrev = -1, walkMovedAt = -9, walkFace = 1, walkShown = 0;
+    function walkerAt() {
+      // у выхода из метро зайчик не стоит под знаком «М»: ждёт на первой точке пути, где его рамка не задевает знак и плашку
+      const i = LB.findIndex((l) => l.el === walkerEl), [w0, h0] = sizes[i] || [37, 72], mb = metroBox();
+      let w = cam.walk, r = routeAt(w), s = bunnyScale(walkerEl, r[0], r[1]);
+      for (let m = 0; mb && m <= 160; m += 2) {
+        const ww = Math.min(1, cam.walk + m / RLEN), rr = routeAt(ww), ss = bunnyScale(walkerEl, rr[0], rr[1]), q = toScreen(rr[0], 1, rr[1]);
+        const bx = [q[0] - w0 * ss / 2, q[1] - h0 * ss * 0.9577, q[0] + w0 * ss / 2, q[1] + h0 * ss * 0.0423];
+        w = ww; r = rr; s = ss;
+        if (bx[2] < mb[0] - 4 || bx[0] > mb[2] + 4 || bx[3] < mb[1] - 4 || bx[1] > mb[3] + 4) break;
+      }
+      walkShown = w;
+      const n = routeAt(Math.min(1, w + 0.01));
+      const a = toScreen(r[0], 1, r[1]), b = toScreen(n[0], 1, n[1]), dx = b[0] - a[0], dy = b[1] - a[1];
+      if (Math.abs(dx) > 0.5 && Math.abs(dx) > Math.abs(dy) * 0.25) walkFace = dx < 0 ? -1 : 1;   // почти вертикальный ход — прежний поворот
+      if (Math.abs(w - walkPrev) > 1e-5) { walkPrev = w; walkMovedAt = breathT; }
+      const hop = !reduced && breathT - walkMovedAt < 0.15 ? -Math.abs(Math.sin(breathT * 9)) * 3 : 0;
+      hopEl.style.transform = `translateY(${hop.toFixed(1)}px) scale(${s.toFixed(3)})`;
+      faceEl.style.transform = `scaleX(${walkFace})`;
+      walkerEl.classList.toggle('is-behind', !seen(r[0], r[1]));
+      return [r[0], 1, r[1]];
+    }
+    // конец пути: последняя видимая точка в последних 40 м пути; не видно ни одной — зайчика нет (endW < 0)
+    let endW = 1, endKey = '';
+    function endAt() {
+      const key = camera.position.toArray().map((v) => Math.round(v / 2)).join();
+      if (key !== endKey) {
+        endKey = key; endW = -1;
+        for (let s = 0; s <= 40; s += 1) { const w = 1 - s / RLEN, r = routeAt(w); if (seen(r[0], r[1])) { endW = w; break; } }
+      }
+      const r = routeAt(Math.max(0, endW));
+      endHopEl.style.transform = `scale(${bunnyScale(endEl, r[0], r[1]).toFixed(3)})`;
+      return [r[0], 1, r[1]];
+    }
+    // Знак метро — как на входах минского метро: красная «М» в круге (вместо тёмного квадрата с буквой; правка владельца
+    // 2026-10-18: «замени на более привычный значок»). Круг — знак метрополитена, как значки мессенджеров (L54), не скругление L22
+    const METRO = '<svg class="fl__m" viewBox="-16 -16 32 32" width="32" height="32" role="img" aria-label="Метро"><circle r="15" fill="#fff" stroke="#E31E25" stroke-width="2"/><path d="M-11.2-4.5H-3L0-1.4 2.9-4.5H11.2V4.5H3.1L0 7.7-3.2 4.5H-11.2Z" fill="#E31E25"/></svg>';
+    const metroEl = mk('fl--metro', METRO + '<span class="fl__plate">Метро «Восток»</span>');
     const LB = [
       { el: mk('fl--pin', '<span class="fl__plate">АРКА 123</span>'), at: () => [A[0], beamTop, A[1]], ax: 0.5, ay: 1, dy: -10, pr: 0, clamp: true, pin: true },
-      { el: mk('fl--walker', '<span class="fl__walk"></span>'), at: () => { const r = routeAt(cam.walk); return [r[0], 1, r[1]]; }, ax: 0.5, ay: 0.5, pr: 1, free: true, when: () => cam.walkOn && cam.walk < 0.995 },
-      { el: mk('fl--end', '<span class="fl__ring"></span><span class="fl__dot"></span>'), at: () => [RP[RP.length - 1][0], 1, RP[RP.length - 1][1]], ax: 0.5, ay: 0.5, pr: 1, free: true, when: () => cam.walk >= 0.995 },
-      { el: mk('fl--metro', '<span class="fl__m">М</span><span class="fl__plate">Метро «Восток»</span>'), at: () => [RP[0][0], 0, RP[0][1]], ax: 0, ay: 0, ox: -16, oy: -16, pr: 2, flip: true },
+      { el: walkerEl, at: walkerAt, ax: 0.5, ay: 0.9577, pr: 1, free: true, when: () => cam.walkOn && cam.walk < 0.995 },
+      { el: endEl, at: endAt, ax: 0.5, ay: 0.9641, pr: 1, free: true, when: () => cam.walk >= 0.995 && endW >= 0 },
+      { el: metroEl, at: () => [RP[0][0], 0, RP[0][1]], ax: 0, ay: 0, ox: -16, oy: -16, pr: 2, flip: true },
       { el: mk('fl--place', '<span class="fl__plate">Национальная библиотека</span>'), at: () => [lc[0], libTop, lc[1]], ax: 0.5, ay: 1, dy: -24, pr: 3, clamp: true },
       { el: mk('fl--place', '<span class="fl__plate">ТРЦ Dana Mall</span>'), at: () => [D.mall.c[0], D.mall.h, D.mall.c[1]], ax: 0.5, ay: 0.5, pr: 4, clamp: true, skip: !D.mall },
       { el: mk('fl--park', '<span class="fl__plate">Парк Писателей</span>'), at: () => [lc[0] + 20, 0, lc[1] + 118], ax: 0.5, ay: 0.5, pr: 5, clamp: true },
@@ -320,9 +387,17 @@
         let x = p[0] - w * l.ax + (l.ox || 0), y = p[1] - h * l.ay + (l.dy || 0) + (l.oy || 0);
         // узкий экран: метро стоит прямо над аркой — плашка «АРКА 123» справа от точки под аркой, а не над столбом
         if (l.pin && narrow()) { p = toScreen(A[0], 0, A[1]); x = p[0] + 22; y = p[1] - h / 2; if (x + w > stageW - 20) x = p[0] - 22 - w; }
-        // верх столба света над краем сцены (конечный обзор) — плашка опускается по столбу, пока не поместится
+        // верх столба света над краем сцены (остановка у дома, конечный обзор) — плашка опускается по столбу, пока не поместится.
+        // Место ищется непрерывно (делением пополам по высоте столба): на краю 24 px плашка едет по столбу вместе с камерой.
+        // Раньше — шагами по 10 м: при «дыхании» камеры и прокрутке плашка прыгала на 50 px между верхом столба и ступенькой ниже
+        // (правка владельца 2026-10-18: «плашка АРКА 123 при скролле очень сильно дрожит/скачет», L140)
         else if (l.pin && y < 24) {
-          for (let k = beamTop - 10; k > archTop + 30; k -= 10) { const q = toScreen(A[0], k, A[1]); if (q[1] - h - 10 >= 24) { p = q; x = q[0] - w / 2; y = q[1] - h - 10; break; } }
+          const fits = (k) => toScreen(A[0], k, A[1])[1] - h - 10 >= 24;
+          let lo = archTop + 30, hi = beamTop;
+          if (fits(lo)) {
+            for (let it = 0; it < 20; it++) { const mid = (lo + hi) / 2; if (fits(mid)) lo = mid; else hi = mid; }
+            p = toScreen(A[0], lo, A[1]); x = p[0] - w / 2; y = p[1] - h - 10;
+          }
         }
         // метро у правого края: плашка слева от значка «М» (иначе подпись не помещается и пропадает)
         let flip = false, stack = false, bw = w, bh = h;
@@ -419,7 +494,7 @@
       setFinal(st.final);
       setStep(reduced ? STOPS.length - 1 : st.stop);
       orbit.az = damp(orbit.az, orbit.taz, 5, dt); orbit.el = damp(orbit.el, orbit.tel, 5, dt);
-      uRoute.uDraw.value = cam.walk * RLEN + (cam.walk >= 0.995 ? 20 : 0);
+      uRoute.uDraw.value = (cam.walkOn && cam.walk < 0.995 ? Math.max(cam.walk, walkShown) : cam.walk) * RLEN + (cam.walk >= 0.995 ? 20 : 0);   // путь — до зайчика (у метро он ждёт в стороне от знака)
       uRoute.uTime.value = reduced ? 0 : breathT;
       applyCamera();
       renderer.render(scene, camera);

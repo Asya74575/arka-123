@@ -288,4 +288,55 @@
       occluders: occluders
     };
   };
+
+  // Размерные линии пустого зала (правка владельца 2026-10-19: подписи длин на полу — «не совсем понятно, что к чему
+  // относится»). Как на чертеже: размерная линия цвета текста (--ink) вдоль стены, выносные линии от неё к стене (углы
+  // стены — концы размера) с выходом на 0,15 м за линию, на концах — засечки под 45°. Высота потолка — вертикальная линия
+  // у колонны от пола до верха, выносные — к углу колонны. Линии — тонкие брусья 3 см без света и теней (как подписи
+  // карты — ровным цветом); проявляются 0,8 с вместе с подписями, гаснут 0,5 с (правило 20). Данные — plan.dims.
+  R.createDims = function (scene) {
+    var mat = new T.MeshBasicMaterial({ color: C.ink, transparent: true, opacity: 0 }), group = new T.Group(), T3 = 0.03, LIFT = 0.016;
+    var vis = 0, want = 0, Y = new T.Vector3(0, 1, 0);
+    function bar(p, q) {   // брус между точками плана [x, y, h]
+      var a = R.toWorld(p[0], p[1], p[2]), b = R.toWorld(q[0], q[1], q[2]), d = b.clone().sub(a), len = d.length();
+      if (len < 1e-3) return;
+      var m = new T.Mesh(new T.BoxGeometry(T3, len, T3), mat);
+      m.position.copy(a).add(b).multiplyScalar(0.5);
+      m.quaternion.setFromUnitVectors(Y, d.normalize());
+      m.raycast = function () {};
+      group.add(m);
+    }
+    (P.dims || []).forEach(function (dm) {
+      var a = dm.a.slice(), b = dm.b.slice(), e = dm.ext, el = Math.hypot(e[0], e[1]) || 1, ux = e[0] / el, uy = e[1] / el, O = 0.15;
+      var vertical = a[0] === b[0] && a[1] === b[1];
+      if (!vertical) { a[2] = b[2] = LIFT; }
+      bar(a, b);
+      [a, b].forEach(function (p) {
+        bar([p[0] + e[0], p[1] + e[1], p[2]], [p[0] - ux * O, p[1] - uy * O, p[2]]);   // выносная: от стены за линию
+        // засечка под 45°: в плоскости пола (длина вдоль линии + выносная) или в вертикальной плоскости у высоты
+        var s = 0.12;
+        if (vertical) bar([p[0] + ux * s, p[1] + uy * s, p[2] - s], [p[0] - ux * s, p[1] - uy * s, p[2] + s]);
+        else {
+          var lx = (b[0] - a[0]), ly = (b[1] - a[1]), ll = Math.hypot(lx, ly); lx /= ll; ly /= ll;
+          bar([p[0] - (lx + ux) * s, p[1] - (ly + uy) * s, p[2]], [p[0] + (lx + ux) * s, p[1] + (ly + uy) * s, p[2]]);
+        }
+      });
+    });
+    group.visible = false; scene.add(group);
+    function paint() {
+      mat.opacity = vis; mat.transparent = vis < 0.999; mat.depthWrite = vis > 0.5; mat.needsUpdate = true;
+      group.visible = vis > 0;
+    }
+    return {
+      show: function (on, instant) { want = on ? 1 : 0; if (instant) { vis = want; paint(); } },
+      update: function (dt) {
+        if (vis === want) return false;
+        vis = want > vis ? Math.min(1, vis + dt / 0.8) : Math.max(0, vis - dt / 0.5);
+        paint(); return true;
+      },
+      busy: function () { return vis !== want; },
+      hide: function () { vis = want = 0; paint(); },   // кадр для картинок (still): без линий
+      count: function () { return group.children.length; }
+    };
+  };
 })(window);

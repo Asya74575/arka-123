@@ -25,8 +25,8 @@ window.SITE = {
     { title: "Форматы", href: "index.html#formaty" },
     { title: "Стоимость", href: "index.html#stoimost" },
     { title: "Фото", href: "index.html#foto" },
+    { title: "Отзывы", href: "index.html#otzyvy" },          // порядок — как блоки на странице: «Отзывы» выше «Как добраться» (правка владельца 2026-10-18)
     { title: "Как добраться", href: "index.html#kak-dobratsya" },
-    { title: "Отзывы", href: "index.html#otzyvy" },
     { title: "Вопросы", href: "index.html#voprosy" }
   ],
   legal: [

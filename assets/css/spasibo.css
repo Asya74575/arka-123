@@ -1,0 +1,69 @@
+/* Страница «Спасибо» — после отправки любой формы сайта (правка владельца 2026-10-18: «должна открываться страница
+   благодарности, в стиле данного сайта + маскот в херо блоке», L142). Ведёт сессия arka-123-dd.
+   Композиция — как у 404 (служебные страницы одной серии): слева метка, заголовок Buyan, строка, пометка и две кнопки
+   одной ширины; справа фирменная арка с фото окна зала и Национальной библиотекой, перед аркой стоит Солнечный зайчик
+   (поза «привет», вырезка владельца) — ноги чуть ниже арки, мягкая тень на полу страницы (в самой картинке, L98).
+   Фон — как у арок главной (--page). Брекпоинты сайта (L88): уже 1024 — арка над текстом, по центру; уже 768 — кнопки
+   во всю ширину. Появление при загрузке: текст поднимается по очереди, фото в арке отъезжает с 1,06 до 1, зайчик
+   поднимается последним (1,2 с); при «уменьшении движения» — сразу на месте. */
+
+.ty { position: relative; display: grid; align-items: center; min-height: max(640px, 100svh); padding: calc(var(--header-h) + 60 * var(--u)) var(--gutter) calc(80 * var(--u)); background: var(--page); }
+.ty__in { display: grid; grid-template-columns: minmax(0, 1fr) calc(640 * var(--u)); align-items: center; column-gap: calc(120 * var(--u)); width: calc(1560 * var(--u)); max-width: 100%; margin-inline: auto; }
+
+/* Текст */
+.ty__mark { display: flex; align-items: center; gap: 16px; margin: 0 0 max(24px, calc(40 * var(--u))); font-weight: 500; font-size: max(16px, calc(18 * var(--u))); line-height: 1.5556; color: var(--muted); }
+.ty__mark::before { content: ""; width: calc(120 * var(--u)); min-width: 48px; height: 1px; background: currentColor; }
+.ty__title { margin: 0; }
+.ty__lead { text-wrap: pretty; max-width: calc(640 * var(--u)); min-width: min(100%, 420px); margin: max(16px, calc(24 * var(--u))) 0 0; color: var(--muted); }
+.ty__note { text-wrap: pretty; max-width: calc(640 * var(--u)); min-width: min(100%, 420px); margin: max(12px, calc(16 * var(--u))) 0 0; color: var(--soft); }
+/* Кнопки одной ширины — по более длинной подписи, как на 404 */
+.ty__btns { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 16px; width: max-content; max-width: 100%; margin-top: max(32px, calc(48 * var(--u))); }
+.ty__btns .btn { width: 100%; }
+.ty__line { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+.ty__line::before { background: var(--ink); }
+@media (hover: hover) { .ty__line:hover:not(:disabled) { color: var(--light); } }
+
+/* Арка с фото и зайчик перед ней. --arch-h — высота арки: от неё считаются рост зайчика и его место */
+.ty__stage { --arch-h: max(420px, min(calc(100svh - var(--header-h) - 140 * var(--u)), calc(860 * var(--u)))); position: relative; height: var(--arch-h); margin: 0; }
+.ty__arch { position: absolute; inset: 0; overflow: hidden; border-radius: calc(320 * var(--u)) calc(320 * var(--u)) 0 0; background: var(--line); }
+.ty__arch img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 30%; }
+.ty__arch::after { content: ""; position: absolute; inset: 0; background: linear-gradient(0deg, rgb(51 41 32 / .5) 0, rgb(51 41 32 / 0) 46%); pointer-events: none; }
+/* Зайчик: рост — 0,62 высоты арки; картинка 640 × 1027, подошвы — на 95,2 % её высоты, ниже — тень.
+   Подошвы стоят на 3 % высоты арки ниже её края: тень ложится на пол страницы */
+.ty__bunny { --b-h: calc(var(--arch-h) * .62); position: absolute; left: 18%; bottom: calc(-.03 * var(--arch-h) - .048 * var(--b-h)); z-index: 1; width: auto; height: var(--b-h); transform: translateX(-50%); pointer-events: none; }
+.ty__bunny img { display: block; width: auto; height: 100%; }
+
+/* Появление при загрузке (правило 20: не за один кадр) */
+@keyframes ty-rise { from { opacity: 0; transform: translateY(calc(48 * var(--u))); } to { opacity: 1; transform: none; } }
+@keyframes ty-photo { from { transform: scale(1.06); } to { transform: none; } }
+@keyframes ty-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes ty-bunny { from { opacity: 0; transform: translate(-50%, 12%); } to { opacity: 1; transform: translate(-50%, 0); } }
+.ty__text > * { animation: ty-rise var(--dur-l) var(--ease-out) both; }
+.ty__text > :nth-child(2) { animation-delay: .1s; }
+.ty__text > :nth-child(3) { animation-delay: .2s; }
+.ty__text > :nth-child(4) { animation-delay: .3s; }
+.ty__text > :nth-child(5) { animation-delay: .4s; }
+.ty__arch { animation: ty-fade var(--dur-m) var(--ease-out) both; }
+.ty__arch img { animation: ty-photo 1.6s var(--ease-out) both; }
+.ty__bunny { animation: ty-bunny var(--dur-l) var(--ease-out) .4s both; }
+@media (prefers-reduced-motion: reduce) { .ty__text > *, .ty__arch, .ty__arch img, .ty__bunny { animation: none; } }
+
+/* ---------- Уже 1024: арка над текстом, по центру ---------- */
+@media (max-width: 1023.98px) {
+  .ty { align-items: start; padding: calc(var(--header-h) + 32px) var(--gutter) 64px; }
+  .ty__in { grid-template-columns: 1fr; row-gap: 56px; width: 100%; max-width: 640px; }
+  .ty__stage { --arch-h: max(240px, min(525px, 46svh)); grid-row: 1; justify-self: center; width: min(100%, 420px); }   /* по высоте окна: заголовок — в первом экране */
+  .ty__arch { border-radius: 210px 210px 0 0; }
+  .ty__text { text-align: center; }
+  .ty__mark { justify-content: center; }
+  .ty__mark::after { content: ""; width: 48px; height: 1px; background: currentColor; }
+  .ty__mark::before { width: 48px; }
+  .ty__lead, .ty__note { margin-inline: auto; min-width: 0; max-width: 560px; }
+  .ty__btns { margin-inline: auto; }
+}
+@media (max-width: 767.98px) {
+  .ty__in { row-gap: 48px; }
+  .ty__stage { --arch-h: max(240px, min(400px, 40svh)); width: min(100%, 320px); }
+  .ty__arch { border-radius: 160px 160px 0 0; }
+  .ty__btns { grid-auto-flow: row; width: 100%; }
+}
