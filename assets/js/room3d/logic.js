@@ -39,10 +39,17 @@
   }
   // Стена срезается, если камера снаружи зала и стена повёрнута к ней внешней стороной или стоит в ближней половине
   // зала (дальше 1 м от середины в сторону камеры) — иначе перегородки ниши заслоняют зал. Камера внутри — ничего.
-  function facesViewer(wall, cam, floor) {
-    if (floor && inside(floor, cam[0], cam[1])) return false;
+  // margin — запас в метрах (правка владельца 2026-10-19: «при вращении — заяц и стенка»): стена начинает опускаться,
+  // когда камера ещё в margin метрах внутри её линии, и успевает опуститься до того, как повернётся к зрителю внешней
+  // стороной (main.js → scene.js updateCut: 1,5 м, чтобы срезаться; 2,5 м, чтобы встать обратно).
+  function wallSide(wall, cam) {   // насколько камера снаружи линии стены, м (меньше 0 — внутри)
     var n = inward(wall), mx = (wall.a[0] + wall.b[0]) / 2, my = (wall.a[1] + wall.b[1]) / 2;
-    if ((cam[0] - mx) * n[0] + (cam[1] - my) * n[1] < 0) return true;
+    return -((cam[0] - mx) * n[0] + (cam[1] - my) * n[1]);
+  }
+  function facesViewer(wall, cam, floor, margin) {
+    if (floor && inside(floor, cam[0], cam[1])) return false;
+    var mx = (wall.a[0] + wall.b[0]) / 2, my = (wall.a[1] + wall.b[1]) / 2;
+    if (wallSide(wall, cam) > -(margin || 0)) return true;
     if (!floor) return false;
     var c = centerOf(floor), dx = cam[0] - c[0], dy = cam[1] - c[1], l = Math.sqrt(dx * dx + dy * dy);
     return ((mx - c[0]) * dx + (my - c[1]) * dy) / l > 1;
@@ -180,7 +187,7 @@
   }
 
   R.logic = {
-    area: area, inside: inside, segDist: segDist, wallDist: wallDist, inward: inward, facesViewer: facesViewer,
+    area: area, inside: inside, segDist: segDist, wallDist: wallDist, inward: inward, facesViewer: facesViewer, wallSide: wallSide,
     footprint: footprint, overlap: overlap, fixedBoxes: fixedBoxes, nearestAngle: nearestAngle,
     cameraPlan: cameraPlan, roomPoints: roomPoints, frameExtent: frameExtent, fitRoom: fitRoom,
     easeInOut: easeInOut, findPath: findPath, pathLength: pathLength, pointAt: pointAt

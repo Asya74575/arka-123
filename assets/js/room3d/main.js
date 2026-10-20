@@ -32,11 +32,18 @@
     mascot = R.createMascot(layer, { project: project, base: opts.base || 'img/', onChange: function () { dirty = true; } });
     // выбор расстановки — карточка внизу рамки (room3d-loader.js)
     root.addEventListener('room3d:view', function (e) { if (P.views[e.detail]) setView(e.detail, false); });
-    // Маскот полупрозрачный, если между камерой и ним колонна, кухня, шкафы или мебель
+    // Маскот полупрозрачный, если между камерой и ним колонна, кухня, шкафы или мебель; за стеной — не виден вовсе
+    // (правка владельца 2026-10-19: «при вращении — заяц и стенка»: картинка маскота лежит поверх холста и без этой
+    // проверки была видна сквозь стену, пока та поднималась или опускалась). Проверка — по голове и по поясу.
     function occluded() {
-      var p = mascot.pos(), to = R.toWorld(p[0], p[1], 0.75), dir = to.clone().sub(camera.position), d = dir.length();
-      ray.set(camera.position, dir.normalize()); ray.far = Math.max(0, d - 0.35);
-      return ray.intersectObjects(room.occluders.concat(furniture.meshes(current)), false).length > 0;
+      var p = mascot.pos(), walls = room.walls(), item = false;
+      for (var i = 0; i < 2; i++) {
+        var to = R.toWorld(p[0], p[1], i ? P.mascotH * 0.9 : 0.6), dir = to.clone().sub(camera.position), d = dir.length();
+        ray.set(camera.position, dir.normalize()); ray.far = Math.max(0, d - 0.35);
+        if (ray.intersectObjects(walls, false).length) return 'wall';
+        if (!i) item = ray.intersectObjects(room.occluders.concat(furniture.meshes(current)), false).length > 0;
+      }
+      return item ? 'item' : false;
     }
 
     // «На весь экран» (правка владельца 2026-10-19: «добавить кнопку открыть на весь экран»): вся рамка с карточкой
@@ -80,7 +87,7 @@
       dirty = true;
     }
     // «Вернуть вид»: ракурс выбранной расстановки и исходный масштаб
-    function reset() { rig.stopAuto(); rig.flyTo(P.views[current].camera, reduced ? 0 : 1400); dirty = true; }
+    function reset() { if (rig.isAt(P.views[current].camera)) return; rig.stopAuto(); rig.flyTo(P.views[current].camera, reduced ? 0 : 1400); dirty = true; }
     // Область рамки для зала (L147): без полос под кнопками (столбец справа по центру — поля слева и справа поровну,
     // чтобы зал стоял посередине; строка в углу вверху — поле сверху), под карточкой расстановок внизу (поле снизу) и без
     // верха, который закрывает шапка, пока блок стоит под аркой (компьютер, блок выше окна — arch.js, home.css: низом у края
@@ -114,6 +121,7 @@
       var dt = last ? Math.min(0.05, (t - last) / 1000) : 0;
       last = t;
       var moved = !frozen && rig.update(dt);
+      ui.setResetOff(!!current && rig.isAt(P.views[current].camera));
       var busy = furniture.update(dt) | dims.update(dt) | mascot.update(dt) | (!frozen && room.updateCut(rig.planPos(), dt, reduced));
       if (busy || !shadowsDone) { renderer.shadowMap.needsUpdate = true; shadowsDone = !busy; }   // поворот камеры теней не меняет
       if (moved || busy || dirty) {
@@ -137,6 +145,8 @@
       view: function () { return current; },
       shown: function () { return furniture.shown(); },
       az: function () { return rig.az(); },
+      // где камера на плане и какие стены срезаны (проверка pravki-2026-10-19-b)
+      cuts: function () { var p = rig.planPos(), o = {}; P.walls.forEach(function (wl) { o[wl.id] = room.wallCut(wl.id); }); return { cam: p, el: rig.el(), cut: o }; },
       uz: function () { return rig.uz(); },
       running: function () { return running; },
       // облик как у карты: какие материалы и текстуры в сцене, сколько линий-рёбер (проверка pravki-2026-10-15-room3d)

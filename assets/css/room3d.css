@@ -22,6 +22,7 @@
 .room3d .is-hidden { opacity: 0; pointer-events: none; }
 /* Маскот-гид (mascot.js): картинка в масштабе зала, под подписями; щелчок или наведение — подмигивает */
 .room3d__mascot { position: absolute; left: 0; top: 0; z-index: 2; pointer-events: auto; cursor: pointer; will-change: transform; transition: opacity .3s; }
+.room3d__mascot.is-gone { pointer-events: none; }   /* за стеной или у края рамки (mascot.js) */
 .room3d__mascot img { display: block; width: 100%; height: 100%; user-select: none; -webkit-user-drag: none; }
 
 /* Карточка расстановок — по референсу coloniazacamil.com (REFERENCES.md, «Колония: карточка серий»; кадры —
@@ -83,11 +84,16 @@ html:not(.js) .room3d__hint, .room3d.is-failed .room3d__hint { display: none; }
 .room3d__zbtn--full svg { width: 26px; height: 26px; }
 .room3d__iexit, .room3d__zbtn--full[aria-pressed="true"] .room3d__ifull { display: none; }
 .room3d__zbtn--full[aria-pressed="true"] .room3d__iexit { display: block; }
-.room3d__zbtn:disabled { opacity: .4; cursor: default; }
+.room3d__zbtn:disabled, .room3d__zbtn.is-off > svg { opacity: .4; }
+.room3d__zbtn:disabled, .room3d__zbtn.is-off { cursor: default; }
 .room3d__zbtn:focus-visible { outline: 2px solid var(--ink); outline-offset: -4px; }
+/* Подпись кнопки при наведении мышью (правка владельца 2026-10-19, вечер: кнопку «Вернуть вид» принимали за «вращение»):
+   тёмная плашка слева от столбца кнопок (уже 1024 кнопки строкой вверху — под кнопкой), проявляется за 0,3 с */
+.room3d__ztip { position: absolute; right: calc(100% + 8px); top: 50%; z-index: 1; padding: 6px 12px; background: var(--ink); color: var(--light); font: 400 14px / 20px var(--font-text); white-space: nowrap; pointer-events: none; opacity: 0; visibility: hidden; transform: translate(8px, -50%); transition: opacity var(--dur-s) var(--ease-out), transform var(--dur-s) var(--ease-out), visibility 0s var(--dur-s); }
 
 @media (hover: hover) {
-  .room3d__zbtn:not(:disabled):hover { border-color: var(--accent); background: var(--accent); }
+  .room3d__zbtn:hover .room3d__ztip, .room3d__zbtn:focus-visible .room3d__ztip { opacity: 1; visibility: visible; transform: translate(0, -50%); transition: opacity var(--dur-s) var(--ease-out), transform var(--dur-s) var(--ease-out), visibility 0s; }
+  .room3d__zbtn:not(:disabled):not(.is-off):hover { border-color: var(--accent); background: var(--accent); }
   .room3d__opt:hover .room3d__name, .room3d__card:hover .room3d__name { color: var(--accent); }
   .room3d__list-close:hover::before { background: var(--accent); }
 }
@@ -95,10 +101,12 @@ html:not(.js) .room3d__hint, .room3d.is-failed .room3d__hint { display: none; }
 /* Компьютер: рамка на 200–300 px выше (правка владельца 2026-10-19): высота — окно без нижнего отступа блока. Пока блок
    стоит под аркой (низом у края окна, home.css), рамка — от самого верха окна: шапка без фона лежит на ней, зал камера
    ставит ниже шапки (main.js → insets), заголовок блока (отступ 40 от рамки) — за краем окна, а не под шапкой (L147).
-   Прежняя рамка стояла под шапкой, над ней — строка табов: на 1920 × 1080 — 792 px, теперь 1020; на ноутбуке 1536 × 730 —
-   484, теперь 682. */
+   Прежняя рамка стояла под шапкой, над ней — строка табов: на 1920 × 1080 — 792 px, днём 2026-10-19 — 1020; на ноутбуке
+   1536 × 730 — 484, днём — 682. Вечером того же дня нижний отступ блока стал 100, как у других блоков (правка владельца:
+   «маленький отступ между блоками»): рамка 980 и 650. Перед подъёмом арки «Форматов» блок стоит ещё 600 px прокрутки
+   (home.css, --under-hold), как «Вопросы» перед «Арендой». */
 @media (min-width: 1024px) {
-  .room3d__stage { aspect-ratio: auto; height: max(420px, calc(100svh - 60 * var(--u))); }
+  .room3d__stage { aspect-ratio: auto; height: max(420px, calc(100svh - 100 * var(--u))); }   /* нижний отступ блока — 100, как у других (2026-10-19, вечер) */
 }
 
 /* Планшет и телефон: рамка выше прежней (890 : 596 и 1 : 1) — под кнопками вверху и карточкой внизу место для зала;
@@ -110,8 +118,12 @@ html:not(.js) .room3d__hint, .room3d.is-failed .room3d__hint { display: none; }
   .room3d__zoom { top: 12px; right: 12px; flex-direction: row; transform: none; }
   .room3d__zpair { flex-direction: row; }
   .room3d__zpair .room3d__zbtn + .room3d__zbtn { border-top: 1px solid var(--line); border-left: 0; }
+  .room3d__ztip { right: 0; top: calc(100% + 8px); transform: translateY(-8px); }
   .room3d__hint { top: 16px; left: 16px; right: auto; bottom: auto; align-items: flex-start; }
   .room3d__views { bottom: 16px; }
+}
+@media (max-width: 1023.98px) and (hover: hover) {
+  .room3d__zbtn:hover .room3d__ztip, .room3d__zbtn:focus-visible .room3d__ztip { transform: none; }
 }
 @media (max-width: 767.98px) {
   .room3d__stage { aspect-ratio: 1 / 1.25; }   /* узкая рамка: кнопки сверху и карточка снизу съедают высоту — зал иначе мелкий */
@@ -138,5 +150,5 @@ html.room3d-full .video { z-index: 300; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .room3d__poster, .room3d__canvas, .room3d__layer, .room3d__zoom, .room3d__zbtn, .room3d__label, .room3d__mascot, .room3d__views, .room3d__card, .room3d__list, .room3d__text, .room3d__thumb img, .room3d__name { transition: none; }
+  .room3d__poster, .room3d__canvas, .room3d__layer, .room3d__zoom, .room3d__zbtn, .room3d__label, .room3d__mascot, .room3d__views, .room3d__card, .room3d__list, .room3d__text, .room3d__thumb img, .room3d__name, .room3d__ztip { transition: none !important; }
 }

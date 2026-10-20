@@ -14,7 +14,9 @@
   function esc(text) { return String(text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
   var names = { telegram: 'Telegram', whatsapp: 'WhatsApp', viber: 'Viber' };
   var menu = site.menu || [];
-  function links(list) { return list.map(function (l) { return '<a href="' + url(l.href) + '">' + esc(l.title) + '</a>'; }).join(''); }
+  // Пункты меню и юридические ссылки — буквы перекатываются, как у кнопок и пунктов шапки (header.js; правка владельца 2026-10-19)
+  function label(t) { return '<span class="btn__label"><span>' + t + '</span><span aria-hidden="true">' + t + '</span></span>'; }
+  function links(list) { return list.map(function (l) { return '<a class="roll" href="' + url(l.href) + '">' + label(esc(l.title)) + '</a>'; }).join(''); }
   var slogan = site.slogan || [];
   // Логотип — как в шапке: знак картинкой, «АРКА 123» и слоган буквами для волны при наведении (header.js, ARKA.logoText;
   // задание 1 ТЗ, правка владельца 2026-10-16, ведёт arka-123-ab). Без букв — прежний лок-ап одной картинкой.

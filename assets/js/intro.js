@@ -25,8 +25,12 @@
   var title = hero.querySelector('[data-intro-title]');
   var rise = hero.querySelectorAll('[data-intro-rise]');
   var photo = hero.querySelector('[data-intro-photo]');
-  if (photo) gsap.fromTo(photo, { scale: 1.06 }, { scale: 1, duration: 2, ease: ARKA.easeOut, delay: delay - .15 });
-  (ARKA.ready || Promise.resolve()).then(function () {
+  // Пришли с другой страницы сайта под фоном арок (menu.js, motion.js — ARKA.arrived): всё проявляется, когда фон уходит
+  var covered = html.classList.contains('pt-cover');
+  var zoom = function () { if (photo) gsap.fromTo(photo, { scale: 1.06 }, { scale: 1, duration: 2, ease: ARKA.easeOut, delay: Math.max(0, delay - .15) }); };
+  if (!covered) zoom();
+  Promise.all([ARKA.ready || Promise.resolve(), covered && ARKA.arrived ? ARKA.arrived : null]).then(function () {
+    if (covered) zoom();
     if (title) ARKA.reveal.chars(title, { delay: delay, stagger: .02 });
     if (rise.length) ARKA.reveal.rise(rise, { delay: delay + .4 });
   });

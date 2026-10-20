@@ -231,16 +231,40 @@
     }).observe(document.body);
   }
 
-  // Пришли по ссылке меню с другой страницы сайта (index.html#раздел, заставки нет — строка в <head> index.html):
+  // Пришли с другой страницы сайта (index.html#раздел или index.html, заставки нет — строка в <head> index.html):
   // сразу к блоку, когда закрепления собраны (браузер прыгает к якорю раньше, чем появляются отступы закреплений).
+  // Переход идёт под фоном арок (pt-cover, menu.js; правка владельца 2026-10-19: «„Как добраться“ — ужасная прыгающая
+  // и резкая анимация»): пока страница грузится и закрепления пересчитываются, раздел встаёт на место под фоном —
+  // два раза, по шрифтам и после загрузки страницы (не дольше 2,5 с), — и только потом фон уходит за 0,8 с.
+  // Заголовок первого экрана (intro.js) ждёт ARKA.arrived — проявляется, когда фон ушёл.
+  var covered = html.classList.contains('pt-cover');
   var arrive = !withLoader && location.hash.length > 1 ? document.getElementById(decodeURIComponent(location.hash.slice(1))) : null;
-  if (arrive && !arrive.closest('.rent')) {
+  if (arrive && arrive.closest('.rent')) arrive = null;
+  var arrived;
+  ARKA.arrived = covered ? new Promise(function (res) { arrived = res; }) : Promise.resolve();
+  if (arrive || covered) {
     var moved = false;
     var stopArrive = function () { moved = true; };
     window.addEventListener('wheel', stopArrive, { passive: true, once: true });
     window.addEventListener('touchstart', stopArrive, { passive: true, once: true });
-    var go = function () { if (!moved) ARKA.scrollTo(arrive, { immediate: true, force: true }); };
-    ARKA.ready.then(go);
-    window.addEventListener('load', function () { setTimeout(go, 60); });
+    var go = function () { if (!moved || covered) ARKA.scrollTo(arrive || 0, { immediate: true, force: true }); };
+    if (!covered) {
+      ARKA.ready.then(go);
+      window.addEventListener('load', function () { setTimeout(go, 60); });
+    } else {
+      if (lenis) lenis.stop();
+      var wait = function (ms) { return new Promise(function (res) { setTimeout(res, ms); }); };
+      var loaded = new Promise(function (res) { if (document.readyState === 'complete') res(); else window.addEventListener('load', function () { setTimeout(res, 60); }); });
+      var reveal = function () {
+        if (!html.classList.contains('pt-cover')) { arrived(); return; }
+        if (lenis) lenis.start();
+        if (ARKA.revealPage) ARKA.revealPage(); else html.classList.remove('pt-cover', 'pt-instant');
+        arrived();
+      };
+      ARKA.ready.then(function () { go(); return Promise.race([loaded, wait(2500)]); })
+        .then(function () { window.ScrollTrigger.refresh(); go(); return wait(150); })
+        .then(function () { go(); reveal(); });
+      setTimeout(reveal, 5000);   // запас: фон уходит, даже если загрузка зависла
+    }
   }
 })();

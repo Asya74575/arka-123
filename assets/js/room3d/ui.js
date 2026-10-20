@@ -9,7 +9,10 @@
 // углы прямые (L22). Подпись на стене прячется, пока эта стена срезана.
 (function (w) {
   var R = w.Room3D, P = R.plan;
-  var ICON_RESET = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5V2L8 6l4 4V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>';   // Material Icons (Apache 2.0): replay
+  // «Вернуть вид» — значок «прицел» (правка владельца 2026-10-19, вечер: стрелку по кругу читали как «вращение» и думали,
+  // что кнопка не работает; выбор владельца — оставить «Вернуть вид», сменить значок и подписать при наведении). Пока
+  // модель стоит в исходном ракурсе и масштабе, кнопка неактивна (бледная): нажимать нечего — видно, что это не поломка.
+  var ICON_RESET = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3A8.99 8.99 0 0 0 13 3.06V1h-2v2.06A8.99 8.99 0 0 0 3.06 11H1v2h2.06A8.99 8.99 0 0 0 11 20.94V23h2v-2.06A8.99 8.99 0 0 0 20.94 13H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/></svg>';   // Material Icons (Apache 2.0): my_location
   var ICON_FULL = '<svg class="room3d__ifull" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>' +   // Material Icons: fullscreen
     '<svg class="room3d__iexit" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/></svg>';   // fullscreen_exit
 
@@ -25,13 +28,16 @@
     // Масштаб: «+» и «−» одной плашкой, «Вернуть вид» и «На весь экран» — отдельно
     var zoom = document.createElement('div');
     zoom.className = 'room3d__zoom';
-    zoom.innerHTML = '<div class="room3d__zpair" role="group" aria-label="Масштаб модели"><button class="room3d__zbtn room3d__zbtn--in" type="button" aria-label="Приблизить"></button><button class="room3d__zbtn room3d__zbtn--out" type="button" aria-label="Отдалить"></button></div>' +
-      '<button class="room3d__zbtn room3d__zbtn--reset" type="button" aria-label="Вернуть вид" title="Вернуть вид">' + ICON_RESET + '</button>' +
-      '<button class="room3d__zbtn room3d__zbtn--full" type="button" aria-label="На весь экран" title="На весь экран" aria-pressed="false">' + ICON_FULL + '</button>';
+    // Подпись кнопки — при наведении мышью (room3d.css, .room3d__ztip): у всех четырёх кнопок, а не только у «Вернуть вид»
+    var tip = function (t) { return '<span class="room3d__ztip" aria-hidden="true">' + t + '</span>'; };
+    zoom.innerHTML = '<div class="room3d__zpair" role="group" aria-label="Масштаб модели"><button class="room3d__zbtn room3d__zbtn--in" type="button" aria-label="Приблизить">' + tip('Приблизить') + '</button><button class="room3d__zbtn room3d__zbtn--out" type="button" aria-label="Отдалить">' + tip('Отдалить') + '</button></div>' +
+      '<button class="room3d__zbtn room3d__zbtn--reset" type="button" aria-label="Вернуть вид">' + ICON_RESET + tip('Вернуть вид') + '</button>' +
+      '<button class="room3d__zbtn room3d__zbtn--full" type="button" aria-label="На весь экран" aria-pressed="false">' + ICON_FULL + tip('На&nbsp;весь экран') + '</button>';
     var zin = zoom.querySelector('.room3d__zbtn--in'), zout = zoom.querySelector('.room3d__zbtn--out'), full = zoom.querySelector('.room3d__zbtn--full');
+    var resetBtn = zoom.querySelector('.room3d__zbtn--reset'), fullTip = full.querySelector('.room3d__ztip');
     zin.addEventListener('click', function () { opts.onZoom(1); });
     zout.addEventListener('click', function () { opts.onZoom(-1); });
-    zoom.querySelector('.room3d__zbtn--reset').addEventListener('click', function () { opts.onReset(); });
+    resetBtn.addEventListener('click', function () { opts.onReset(); });
     full.addEventListener('click', function () { opts.onFull(); });
     stage.appendChild(zoom);
     // Как подписи 3D-карты: подписи не налезают друг на друга — по порядку плана; подпись, которая задела уже
@@ -52,10 +58,16 @@
       zoomBox: function () { return zoom; },
       // на пределе приближения кнопка гаснет и не нажимается
       setZoomLimits: function (atMin, atMax) { zin.disabled = atMin; zout.disabled = atMax; },
+      // модель в исходном ракурсе и масштабе — «Вернуть вид» неактивна (фокус с неё не теряется: aria-disabled)
+      setResetOff: function (off) {
+        if (resetBtn.classList.contains('is-off') === off) return;
+        resetBtn.classList.toggle('is-off', off);
+        resetBtn.setAttribute('aria-disabled', String(off));
+      },
       setFull: function (on) {
         full.setAttribute('aria-pressed', String(on));
         full.setAttribute('aria-label', on ? 'Свернуть' : 'На весь экран');
-        full.title = on ? 'Свернуть' : 'На весь экран';
+        fullTip.textContent = on ? 'Свернуть' : 'На весь экран';
       },
       layout: function () { var placed = []; labels.forEach(function (it) { put(it, labelsOn, placed); }); }
     };

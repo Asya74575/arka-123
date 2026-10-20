@@ -164,7 +164,7 @@
    Блок встаёт низом у края окна — под ним виден только его собственный нижний отступ (100 макета); пустого поля нет
    (правка владельца 2026-10-16: «большой отступ между видео и „Зал под ваш формат“», «отступ между FAQ и формой
    большой», L125; было поле в 30 % высоты окна).
-   Пауза --under-hold — только у «Вопросов» (та же правка: «зафиксируй блок FAQ с достаточным отступом внизу экрана +
+   Пауза --under-hold — у «Вопросов» и у 3D-модели «Наше помещение» (с 2026-10-19; та же правка: «зафиксируй блок FAQ с достаточным отступом внизу экрана +
    задержка скролла 1–2 с + появление блока формы»): вопросы встали целиком и стоят ещё 600 px прокрутки (≈ 6 щелчков
    колеса, 1–2 с) — последние вопросы успевают дочитать; потом поднимается арка формы. Промежуток и подъём арки
    длиннее на столько же. */
@@ -172,6 +172,7 @@
 @media (min-width: 1024px) {
   .has-motion .under-wrap { --under-hold: 0px; }
   .has-motion .faq-wrap { --under-hold: 600px; }
+  .has-motion .about-wrap { --under-hold: 600px; }   /* та же пауза у 3D-модели (правка владельца 2026-10-19: «фон следующего блока быстро налазит на 3D-модель, сделай задержку») */
   .has-motion .under-wrap.is-under > .arch-gap { display: block; height: calc(100svh + 28.125cqw + var(--under-hold)); }
   .has-motion .under-wrap.is-under > [data-arch-under] { position: sticky; top: var(--under-top, 0px); }
   .has-motion .under-wrap.is-under + [data-arch-next] { margin-top: calc(-100svh - 28.125cqw); }
@@ -203,11 +204,14 @@
 .about__spacer { display: none; }
 @media (min-width: 1024px) {
   .has-motion .about { position: sticky; top: 0; background: var(--page); }
-  .has-motion .about__spacer { display: block; height: 100svh; }
+  /* экран на рост фото + пауза --about-hold: фото с текстом стоит, пока прокрутка проходит ещё 1000 px (≈ 10 щелчков колеса,
+     2–3 с), потом поднимается следующий блок (правка владельца 2026-10-19, вечер: «сделай задержку данного блока 2–3 сек»;
+     about.js берёт паузу отсюда). Не --under-hold у .about-wrap — то пауза 3D-модели перед аркой «Форматов» (arka-123-ff) */
+  .has-motion .about__spacer { --about-hold: 1000px; display: block; height: calc(100svh + var(--about-hold)); }
 }
 
 /* ---------- 5.6. Видео «Наше помещение» ---------- */
-.video { position: relative; z-index: 2; padding: calc(98 * var(--u)) var(--gutter) calc(60 * var(--u)); background: var(--surface); }   /* снизу 60, а не 100: рамка 3D-модели выше (правка владельца 2026-10-19, room3d.css) */
+.video { position: relative; z-index: 2; padding: calc(98 * var(--u)) var(--gutter) calc(100 * var(--u)); background: var(--surface); }   /* снизу 100, как у других блоков (правка владельца 2026-10-19, вечер: «маленький отступ между блоками, сделай таким же, как в других»; днём было 60 ради высоты рамки) */
 .video__title { width: 15.333em; max-width: 100%; margin: calc(100 * var(--u)) auto 0; text-align: center; }
 /* С 2026-10-18 в большой рамке блока — 3D-модель зала (room3d.css), видеопрогулка — в рамке «Форматов» (правка владельца:
    «поменять местами видео и 3д-планирование помещения»; ведёт arka-123-a0). Кнопка плеера и пауза — у любого [data-video]. */
@@ -409,7 +413,6 @@ html:not(.js) .faq__a { grid-template-rows: 1fr; }
   .ahead__mark .mark__line, .mark--down .mark__line { height: 120px; }
   .ahead__title, .ahead--rent .ahead__title { margin-top: 40px; }
   .about__text { bottom: 32px; }
-  .video { padding: 48px var(--gutter); }
   .formats__grid { grid-template-columns: 1fr; gap: 24px; margin-top: 40px; }
   .formats__intro { margin-top: calc(-24px - .5lh + .03em); }   /* промежуток сетки здесь 24 */
   .fcard--own { width: auto; }

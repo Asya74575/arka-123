@@ -68,7 +68,9 @@
       box.style.width = (H * k.ar).toFixed(1) + 'px';
       box.style.height = H.toFixed(1) + 'px';
       box.style.transform = 'translate3d(' + foot.x.toFixed(1) + 'px,' + (foot.y - H * k.sole - lift).toFixed(1) + 'px,0) translateX(-50%)' + (st.mirror ? ' scaleX(-1)' : '');
-      box.style.opacity = !foot.visible ? '0' : dim ? '0.4' : '';   // у края рамки — прячется целиком, как подписи
+      var gone = !foot.visible || dim === 'wall';   // у края рамки — прячется целиком, как подписи; за стеной — тоже
+      box.style.opacity = gone ? '0' : dim ? '0.4' : '';
+      box.classList.toggle('is-gone', gone);
     }
     return {
       place: place, walkTo: walkTo, update: update, layout: layout,

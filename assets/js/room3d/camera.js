@@ -135,7 +135,10 @@
       },
       planPos: function () { return [camera.position.x + P.center[0], P.center[1] - camera.position.z]; },
       busy: function () { return !!fly; },
-      az: function () { return s.az; }
+      az: function () { return s.az; },
+      el: function () { return s.el; },
+      // камера стоит в ракурсе вида v и в исходном масштабе (кнопка «Вернуть вид» тогда неактивна, ui.js)
+      isAt: function (v) { return !fly && !zfly && Math.abs(L.nearestAngle(s.az, v.az) - s.az) < 0.5 && Math.abs(s.el - v.el) < 0.5 && Math.abs(s.uz - (v.uz != null ? v.uz : 1)) < 0.005; }
     };
   };
 })(window);

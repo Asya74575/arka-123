@@ -267,12 +267,17 @@
     scene.add(hemi, sun, sun.target);
 
 
+    // Срез стен при повороте (правка владельца 2026-10-19: «при вращении помещения баг: заяц и стенка»): стена опускается
+    // заранее — пока камера ещё в 1,5 м внутри её линии, а встаёт, только когда камера ушла на 2,5 м (запас, чтобы стена
+    // не дёргалась туда-обратно на границе). Если камера уже снаружи, а стена ещё не опустилась (быстрый поворот), —
+    // опускается за 0,25 с, а не за 0,6: стена, повёрнутая к зрителю внешней стороной, не закрывает зал.
     function updateCut(cam, dt, instant) {
       var busy = false;
       list.forEach(function (r) {
-        var want = L.facesViewer(r.wall, cam, P.floor) ? 1 : 0;
+        var want = L.facesViewer(r.wall, cam, P.floor, r.cut > 0.5 ? 2.5 : 1.5) ? 1 : 0;
         if (r.cut !== want) {
-          r.cut = instant ? want : want > r.cut ? Math.min(want, r.cut + dt / 0.6) : Math.max(want, r.cut - dt / 0.6);
+          var rate = want > r.cut && L.wallSide(r.wall, cam) > 0 && !L.inside(P.floor, cam[0], cam[1]) ? 0.25 : 0.6;
+          r.cut = instant ? want : want > r.cut ? Math.min(want, r.cut + dt / rate) : Math.max(want, r.cut - dt / 0.6);
           busy = true;
         }
         var k = 1 - L.easeInOut(r.cut);
@@ -281,10 +286,17 @@
       });
       return busy;
     }
+    // Стены для проверки «маскот за стеной» (main.js): непрозрачные части стен, верх — пока он не опущен. Кухня и шкафы
+    // в группах стен — не стены: за ними маскот полупрозрачный, как за мебелью (occluders)
+    var wallMeshes = [];
+    list.forEach(function (r) {
+      [r.base, r.upper].forEach(function (g) { g.traverse(function (o) { if (o.isMesh && !o.material.transparent && o.material !== M.pane && occluders.indexOf(o) < 0) wallMeshes.push({ m: o, up: g === r.upper ? r : null }); }); });
+    });
     return {
       updateCut: updateCut,
       busy: function () { return list.some(function (r) { return r.cut > 0 && r.cut < 1; }); },
       wallCut: function (id) { return recs[id] ? recs[id].cut : 0; },
+      walls: function () { return wallMeshes.filter(function (w) { return !w.up || w.up.upper.visible; }).map(function (w) { return w.m; }); },
       occluders: occluders
     };
   };

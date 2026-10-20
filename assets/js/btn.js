@@ -40,5 +40,7 @@
 
   window.ARKA = window.ARKA || {};
   window.ARKA.splitButtons = split;
-  split();
+  split();   // и пункты меню в шапке, панели меню и подвале (класс roll, правка владельца 2026-10-19) — у них та же подпись
+  // Safari на iPhone включает :active (буквы пунктов меню при нажатии, base.css) только если на странице слушают касания
+  document.addEventListener('touchstart', function () {}, { passive: true });
 })();

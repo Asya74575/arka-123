@@ -174,7 +174,7 @@
       });
       if (!ok) { if (status) status.textContent = ''; if (firstBad) firstBad.focus(); return; }
       if (status) status.textContent = '';
-      location.assign(THANKS);
+      if (window.ARKA && window.ARKA.leaveTo) window.ARKA.leaveTo(THANKS); else location.assign(THANKS);   // переход под фоном, как у ссылок (menu.js, 2026-10-19)
     });
   });
   document.addEventListener('click', function (e) { if (!e.target.closest('.field.is-open')) closeAll(null); });

@@ -4,7 +4,7 @@
    1024 — подпись остановки слева внизу или снизу во всю ширину, 768 — телефон.
    Состояния: без класса is-live — без JS и WebGL (кадр сцены картинкой, остановки и время в пути списком);
    is-live — сцена закреплена, камера летит за прокруткой; is-reduced — «уменьшение движения» (один кадр, списки);
-   is-panel-in — панель в сцене (≥1280), is-final — конец полёта (панель выехала, карту можно крутить). */
+   is-panel-in — панель в сцене (≥1280, стоит справа весь полёт), is-final — конец полёта (карту можно крутить). */
 
 .fly { --fly-pad: max(16px, calc(40 * var(--u))); --fly-gap: max(16px, calc(40 * var(--u))); position: relative; margin-top: calc(40 * var(--u)); }
 .fly__track { position: relative; }
@@ -21,10 +21,9 @@
 .fly__back { background: var(--white); color: var(--ink); box-shadow: inset 0 0 0 1px var(--line); }
 .fly__back[hidden] { display: none; }
 .fly__osm { display: none; }
-/* остановки «Листайте — пройдём…» и «Покрутите карту» — только в полёте; без него от последней остаётся кнопка */
+/* остановка «Листайте — пройдём…» — только в полёте. Кнопки «Перейти в карту» и «Вернуться к маршруту» — у последней остановки
+   «Вы пришли» (с 2026-10-19, вечер: полёт кончается на ней; остановка «Покрутите карту» снята) */
 .fly:not(.is-live) .fly__step--intro, .fly.is-reduced .fly__step--intro { display: none; }
-.fly:not(.is-live) .fly__step--final > :not(.fly__btns), .fly.is-reduced .fly__step--final > :not(.fly__btns) { display: none; }
-.fly:not(.is-live) .fly__step--final .fly__btns, .fly.is-reduced .fly__step--final .fly__btns { margin-top: 0; }
 
 /* ---------- Панель «Время в пути»: под сценой (уже 1280, без JS, «уменьшение движения») ---------- */
 .fly__panel { margin-top: 32px; }
@@ -47,7 +46,7 @@
 .loc__osm { margin-top: 24px; color: var(--soft); }
 
 /* ---------- Полёт: сцена закреплена под шапкой, камера летит за прокруткой ---------- */
-.fly.is-live .fly__track { height: 720svh; }
+.fly.is-live .fly__track { height: 500svh; }   /* 5 экранов: полёт до «Вы пришли» (правка владельца 2026-10-19, вечер: «уменьшить проигрывание 3д-карты»; было 7,2) */
 .fly.is-live .fly__stage { position: sticky; top: var(--header-h); height: calc(100svh - var(--header-h) - var(--fly-gap)); min-height: 420px; }
 .fly.is-live .fly__still { display: none; }
 .fly.is-live .fly__view { display: block; position: absolute; inset: 0; touch-action: pan-y; }
@@ -63,9 +62,11 @@
 .fly.is-live .fly__step { grid-area: 1 / 1; align-self: end; opacity: 0; visibility: hidden; transform: translateY(16px); transition: opacity var(--dur-s) var(--ease-in-out), transform var(--dur-s) var(--ease-in-out), visibility 0s linear var(--dur-s); }
 .fly.is-live .fly__step.is-on { opacity: 1; visibility: visible; transform: none; pointer-events: auto; transition: opacity var(--dur-m) var(--ease-out) .15s, transform var(--dur-m) var(--ease-out) .15s, visibility 0s; }
 
-/* панель в сцене (≥1280): выезжает справа в конце полёта, как панель макета поверх карты */
-.fly.is-panel-in .fly__stage > .fly__panel { position: absolute; top: 0; right: 0; bottom: 0; z-index: 2; width: calc(704 * var(--u)); margin: 0; padding: calc(80 * var(--u)) calc(60 * var(--u)) 0 calc(118 * var(--u)); background: linear-gradient(90deg, rgb(225 227 233 / 0) 0, var(--page) calc(118 * var(--u))); transform: translateX(104%); transition: transform .9s var(--ease-out); }
-.fly.is-panel-in.is-final .fly__stage > .fly__panel { transform: none; }
+/* панель в сцене (≥1280): стоит справа весь полёт, как панель макета поверх карты (правка владельца 2026-10-19, вечер:
+   «пусть данная информация постоянно будет зафиксирована справа»; раньше выезжала в конце полёта). Подпись данных OSM —
+   в самой панели, у сцены её нет */
+.fly.is-panel-in .fly__stage > .fly__panel { position: absolute; top: 0; right: 0; bottom: 0; z-index: 2; width: calc(704 * var(--u)); margin: 0; padding: calc(80 * var(--u)) calc(60 * var(--u)) 0 calc(118 * var(--u)); background: linear-gradient(90deg, rgb(225 227 233 / 0) 0, var(--page) calc(118 * var(--u))); }
+.fly.is-live.is-panel-in .fly__osm { display: none; }
 .fly.is-panel-in .fly__stage > .fly__panel .loc__cap { margin-bottom: calc(24 * var(--u)); }
 .fly.is-panel-in .fly__stage > .fly__panel .loc__cap--car { margin-top: calc(48 * var(--u)); }
 .fly.is-panel-in .fly__stage > .fly__panel .loc__osm { position: absolute; left: calc(118 * var(--u)); bottom: calc(40 * var(--u)); margin: 0; }

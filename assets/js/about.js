@@ -32,11 +32,15 @@
       return { clip: 'inset(' + top + 'px ' + (W - left - w) + 'px ' + (H - top - h) + 'px ' + left + 'px)', scale: Math.max(w / W, h / H), oy: (top + h / 2) / H * 100 };
     }
     gsap.set(img, { transformOrigin: '50% ' + frame().oy + '%' });
+    // Пауза после роста (правка владельца 2026-10-19, вечер: «сделай задержку данного блока 2–3 сек»): фото выросло, текст
+    // проявился — блок стоит, пока прокрутка проходит --about-hold (home.css, 1000 px), и только потом поднимается следующий блок.
+    // Рост — на первый экран прокрутки, а не на всю высоту промежутка
+    function hold() { return parseFloat(getComputedStyle(spacer).getPropertyValue('--about-hold')) || 0; }
     var tl = gsap.timeline({ defaults: { ease: 'none' } })
       .fromTo(photo, { clipPath: function () { return frame().clip; } }, { clipPath: 'inset(0px 0px 0px 0px)' }, 0)
       .fromTo(img, { scale: function () { return frame().scale; } }, { scale: 1 }, 0);
     var st = window.ScrollTrigger.create({
-      trigger: spacer, start: 'top bottom', end: 'bottom bottom', animation: tl, scrub: .5, invalidateOnRefresh: true,
+      trigger: spacer, start: 'top bottom', end: function () { return '+=' + Math.max(1, spacer.offsetHeight - hold()); }, animation: tl, scrub: .5, invalidateOnRefresh: true,
       onUpdate: function (self) {
         sec.setAttribute('data-bg', self.progress > .82 ? 'dark' : 'light');
         if (!shown && self.progress > .9) { shown = true; ARKA.reveal.lines(text); }
