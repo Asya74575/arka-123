@@ -20,10 +20,8 @@
 /* Подписи размеров — как метки 3D-карты (map.css: .fl__plate): белая плашка на середине своей размерной линии */
 .room3d__label { position: absolute; left: 0; top: 0; z-index: 3; padding: 6px 12px; background: var(--white); color: var(--ink); font: 400 max(12px, calc(14 * var(--u))) / 1.4286 var(--font-text); white-space: nowrap; transition: opacity var(--dur-s) var(--ease-out); }
 .room3d .is-hidden { opacity: 0; pointer-events: none; }
-/* Маскот-гид (mascot.js): картинка в масштабе зала, под подписями; щелчок или наведение — подмигивает */
-.room3d__mascot { position: absolute; left: 0; top: 0; z-index: 2; pointer-events: auto; cursor: pointer; will-change: transform; transition: opacity .3s; }
-.room3d__mascot.is-gone { pointer-events: none; }   /* за стеной или у края рамки (mascot.js) */
-.room3d__mascot img { display: block; width: 100%; height: 100%; user-select: none; -webkit-user-drag: none; }
+/* Маскот-гид — с 2026-10-20 плоскость в самой 3D-сцене (mascot.js), а не картинка поверх холста: своих стилей нет,
+   курсор «рука» над ним ставит mascot.js */
 
 /* Карточка расстановок — по референсу coloniazacamil.com (REFERENCES.md, «Колония: карточка серий»; кадры —
    review/refs/coloniazacamil.com/route-1440/): тёмная карточка внизу рамки по центру — миниатюра расстановки, название
@@ -78,8 +76,12 @@ html:not(.js) .room3d__hint, .room3d.is-failed .room3d__hint { display: none; }
 .room3d__zpair { display: flex; flex-direction: column; }
 .room3d__zbtn { position: relative; display: grid; place-items: center; width: 56px; height: 56px; padding: 0; border: 1px solid var(--line); background: var(--white); color: var(--ink); cursor: pointer; transition: background-color var(--dur-m) var(--ease-in-out), border-color var(--dur-m) var(--ease-in-out), opacity var(--dur-s) var(--ease-out); }
 .room3d__zpair .room3d__zbtn + .room3d__zbtn { border-top: 0; }
-.room3d__zbtn--in::before, .room3d__zbtn--out::before, .room3d__zbtn--in::after { content: ""; position: absolute; left: 50%; top: 50%; width: 18px; height: 2px; margin: -1px 0 0 -9px; background: currentColor; }
-.room3d__zbtn--in::after { transform: rotate(90deg); }
+/* знаки — линии 1,5 px на всех ширинах (правка владельца 2026-10-21: «знак + намного тоньше [значков рядом], сделай
+   толщину на 0,5 px больше», L193; 2026-10-20 было «1 px на всех брекпоинтах», до того 2). Векторные (ui.js, room3d__sign),
+   как значки рядом: блок CSS 1,5 px браузер ставит по сетке пикселей то в 1, то в 2 — «−» выходил тоньше вертикали «+»;
+   толщина — в пикселях страницы при любом размере знака (non-scaling-stroke) */
+.room3d__zbtn .room3d__sign { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.5px; }
+.room3d__sign path { vector-effect: non-scaling-stroke; }
 .room3d__zbtn svg { width: 22px; height: 22px; fill: currentColor; }
 .room3d__zbtn--full svg { width: 26px; height: 26px; }
 .room3d__iexit, .room3d__zbtn--full[aria-pressed="true"] .room3d__ifull { display: none; }
@@ -105,6 +107,15 @@ html:not(.js) .room3d__hint, .room3d.is-failed .room3d__hint { display: none; }
    1536 × 730 — 484, днём — 682. Вечером того же дня нижний отступ блока стал 100, как у других блоков (правка владельца:
    «маленький отступ между блоками»): рамка 980 и 650. Перед подъёмом арки «Форматов» блок стоит ещё 600 px прокрутки
    (home.css, --under-hold), как «Вопросы» перед «Арендой». */
+/* Уже 1440 кнопки модели — 40 × 40 (правка владельца 2026-10-20 на 1024: «уменьши размеры функциональных элементов, сейчас
+   56 px, это много, сделай 40»; arka-123-e8). Знаки и значки — под меньшую кнопку */
+@media (max-width: 1439.98px) {
+  .room3d__zbtn { width: 40px; height: 40px; }
+  .room3d__zbtn .room3d__sign { width: 14px; height: 14px; }
+  .room3d__zbtn svg { width: 18px; height: 18px; }
+  .room3d__zbtn--full svg { width: 20px; height: 20px; }
+  .room3d__zoom { gap: 6px; }
+}
 @media (min-width: 1024px) {
   .room3d__stage { aspect-ratio: auto; height: max(420px, calc(100svh - 100 * var(--u))); }   /* нижний отступ блока — 100, как у других (2026-10-19, вечер) */
 }
@@ -150,5 +161,5 @@ html.room3d-full .video { z-index: 300; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .room3d__poster, .room3d__canvas, .room3d__layer, .room3d__zoom, .room3d__zbtn, .room3d__label, .room3d__mascot, .room3d__views, .room3d__card, .room3d__list, .room3d__text, .room3d__thumb img, .room3d__name, .room3d__ztip { transition: none !important; }
+  .room3d__poster, .room3d__canvas, .room3d__layer, .room3d__zoom, .room3d__zbtn, .room3d__label, .room3d__views, .room3d__card, .room3d__list, .room3d__text, .room3d__thumb img, .room3d__name, .room3d__ztip { transition: none !important; }
 }

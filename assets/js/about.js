@@ -8,7 +8,8 @@
 // белый блок закрывал текст внизу раньше, чем его успевали дочитать. Только transform, без задержки следования:
 // низ фото всегда у верха видео, щели и наезда нет.
 // Блок помечает фон под шапкой: пока фото маленькое — светлый (шапка тёмная), когда выросло — тёмный.
-// Телефон и планшет: фото на весь экран, параллакс внутри рамки (−11,5 % → 11,5 %, как data-parallax), текст — по строкам.
+// Телефон и планшет: фото целиком в рамке 16 : 9 (оба окна), текст по строкам (с 2026-10-20; было — фото на весь экран
+// с параллаксом и вырезка с левым окном); на планшете текст на фото внизу, на телефоне — под фото (home.css, 2026-10-21).
 // «Уменьшение движения», без JS — фото сразу на весь экран, текст на месте.
 (function () {
   var ARKA = window.ARKA || {};
@@ -25,11 +26,16 @@
     var shown = false;
     gsap.set(text, { opacity: 0 });
     // Рамка слайда в экране блока: 585 × 784 по центру, верх — на 416 выше середины (единица экранных блоков)
+    // Фото на 2 px ниже блока (home.css, правка 2026-10-20 — полоса 1 px внизу экрана): низ рамки и центр масштаба — от высоты фото PH
     function frame() {
-      var W = sec.clientWidth, H = sec.clientHeight;
+      var W = sec.clientWidth, H = sec.clientHeight, PH = photo.offsetHeight || H;
       var s = Math.min(Math.min(W, 2560) / 1920, H / 1080);
       var w = 585 * s, h = 784 * s, top = H / 2 - 416 * s, left = (W - w) / 2;
-      return { clip: 'inset(' + top + 'px ' + (W - left - w) + 'px ' + (H - top - h) + 'px ' + left + 'px)', scale: Math.max(w / W, h / H), oy: (top + h / 2) / H * 100 };
+      // Масштаб — чтобы уменьшенное фото закрывало рамку целиком: центр рамки выше середины фото (на 24 макета + 1 px), и при
+      // масштабе «по высоте рамки» верх фото не доходил до верха рамки — сверху открывалась полоса фона 9–18 px (правка
+      // владельца 2026-10-20: «вверху какая-то белая полоса, убери её»; arka-123-e8)
+      var oy = top + h / 2;
+      return { clip: 'inset(' + top + 'px ' + (W - left - w) + 'px ' + (PH - top - h) + 'px ' + left + 'px)', scale: Math.max(w / W, h / PH, h / 2 / oy, h / 2 / (PH - oy)) + .002, oy: oy / PH * 100 };
     }
     gsap.set(img, { transformOrigin: '50% ' + frame().oy + '%' });
     // Пауза после роста (правка владельца 2026-10-19, вечер: «сделай задержку данного блока 2–3 сек»): фото выросло, текст
@@ -60,12 +66,12 @@
       sec.setAttribute('data-bg', 'dark');
     };
   });
-  // Телефон и планшет: параллакс фото внутри рамки, текст — по строкам при входе в экран
+  // Телефон и планшет: фото зала целиком в рамке 16 : 9 — оба окна видны полностью (правка владельца 2026-10-20 на 1023:
+  // «на экране два окна, и они полностью помещены»; arka-123-e8), без параллакса — он срезал верх арок; текст под фото —
+  // по строкам при входе в экран
   mm.add('(max-width: 1023.98px)', function () {
-    photo.classList.add('is-parallax');
     gsap.set(text, { opacity: 0 });
-    var tw = gsap.fromTo(img, { yPercent: -11.54 }, { yPercent: 11.54, ease: 'none', scrollTrigger: { trigger: sec, start: 'top bottom', end: 'bottom top', scrub: .5 } });
     var st = window.ScrollTrigger.create({ trigger: text, start: 'top 85%', once: true, onEnter: function () { ARKA.reveal.lines(text); } });
-    return function () { st.kill(); tw.scrollTrigger && tw.scrollTrigger.kill(); tw.kill(); photo.classList.remove('is-parallax'); gsap.set(img, { clearProps: 'transform' }); gsap.set(text, { clearProps: 'opacity' }); };
+    return function () { st.kill(); gsap.set(text, { clearProps: 'opacity' }); };
   });
 })();

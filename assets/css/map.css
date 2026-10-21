@@ -4,7 +4,8 @@
    1024 — подпись остановки слева внизу или снизу во всю ширину, 768 — телефон.
    Состояния: без класса is-live — без JS и WebGL (кадр сцены картинкой, остановки и время в пути списком);
    is-live — сцена закреплена, камера летит за прокруткой; is-reduced — «уменьшение движения» (один кадр, списки);
-   is-panel-in — панель в сцене (≥1280, стоит справа весь полёт), is-final — конец полёта (карту можно крутить). */
+   is-panel-in — панель в сцене (≥1280, стоит справа весь полёт), is-final — конец полёта (карту можно крутить);
+   is-pinned — сцена внутри закрепления, position: fixed вместо sticky (только мышь; 2026-10-20). */
 
 .fly { --fly-pad: max(16px, calc(40 * var(--u))); --fly-gap: max(16px, calc(40 * var(--u))); position: relative; margin-top: calc(40 * var(--u)); }
 .fly__track { position: relative; }
@@ -48,6 +49,11 @@
 /* ---------- Полёт: сцена закреплена под шапкой, камера летит за прокруткой ---------- */
 .fly.is-live .fly__track { height: 500svh; }   /* 5 экранов: полёт до «Вы пришли» (правка владельца 2026-10-19, вечер: «уменьшить проигрывание 3д-карты»; было 7,2) */
 .fly.is-live .fly__stage { position: sticky; top: var(--header-h); height: calc(100svh - var(--header-h) - var(--fly-gap)); min-height: 420px; }
+/* не ниже 420, но и не ниже края окна (правка владельца 2026-10-20, окно 1439 × 522: низ сцены с панелью уходил под край; arka-123-7a) */
+.fly.is-live .fly__stage { min-height: min(420px, calc(100svh - var(--header-h))); }
+/* внутри закрепления — fixed с тем же верхом, левым краем и шириной (fly.js, pinStage; правка владельца 2026-10-20: «при скролле
+   правая часть контента дёргается/дребезжит» — на 125 % sticky рисуется со сдвигом в доли пикселя, текст панели мерцает) */
+.fly.is-live.is-pinned .fly__stage { position: fixed; left: var(--fly-x); width: var(--fly-w); }
 .fly.is-live .fly__still { display: none; }
 .fly.is-live .fly__view { display: block; position: absolute; inset: 0; touch-action: pan-y; }
 .fly__canvas { display: block; width: 100%; height: 100%; opacity: 0; transition: opacity var(--dur-m) var(--ease-out); }
@@ -84,6 +90,25 @@
   .fly.is-panel-in .fly__stage > .fly__panel .loc__car .loc__num { font-size: 28px; }
   .fly.is-panel-in .fly__stage > .fly__panel .loc__osm { bottom: 16px; }
 }
+/* Низкое окно (правка владельца 2026-10-20, 1439 × 522 при 125 %: «правая часть текстового контента внизу обрезается» — строка
+   «Аэропорт Минск» за краем сцены, подпись OSM поверх строки «Железнодорожный вокзал»; arka-123-7a): панель плотнее, подпись —
+   строкой под списком. Весь список в сцене от 1280 при окне от ≈ 465 px (tools/checks/pravki-2026-10-20-low.mjs) */
+@media (max-height: 640px) {
+  .fly.is-panel-in .fly__stage > .fly__panel { padding-top: 16px; }
+  .fly.is-panel-in .fly__stage > .fly__panel .loc__cap { margin-bottom: 8px; }
+  .fly.is-panel-in .fly__stage > .fly__panel .loc__cap--car { margin-top: 12px; }
+  .fly.is-panel-in .fly__stage > .fly__panel .loc__walk { gap: 8px 32px; }
+  .fly.is-panel-in .fly__stage > .fly__panel .loc__walk .loc__ico { margin-bottom: 8px; }
+  .fly.is-panel-in .fly__stage > .fly__panel .loc__walk .loc__num { font-size: 32px; }
+  .fly.is-panel-in .fly__stage > .fly__panel .loc__walk .loc__unit { padding-bottom: 4px; }
+  .fly.is-panel-in .fly__stage > .fly__panel .loc__car li { height: 36px; }
+  .fly.is-panel-in .fly__stage > .fly__panel .loc__car .loc__num { font-size: 24px; }
+  .fly.is-panel-in .fly__stage > .fly__panel .loc__osm { position: static; margin-top: 8px; }
+}
+@media (max-height: 540px) {
+  .fly.is-panel-in .fly__stage > .fly__panel { padding-top: 12px; }
+  .fly.is-panel-in .fly__stage > .fly__panel .loc__car li { height: 32px; }
+}
 .fly.is-live.is-final:not(.is-reduced) .fly__view { cursor: grab; }
 .fly.is-dragging .fly__view { cursor: grabbing; }
 
@@ -96,14 +121,24 @@
 .fl--metro { display: flex; align-items: center; gap: 8px; }
 .fl--metro.is-flip { flex-direction: row-reverse; }
 .fl--metro.is-stack { flex-direction: column; align-items: center; }   /* телефон 320–389: «М» на точке, плашка под ним (fly.js) */
+.fl--metro.is-stack .fl__m { translate: var(--m-dx, 0px) 0; }   /* плашка прижата к краю — знак остаётся на выходе из метро (2026-10-20) */
 .fl--metro .fl__m { display: block; flex: none; width: 32px; height: 32px; }   /* знак минского метро — красная «М» в круге (fly.js, METRO) */
 /* Пешеход и конец пути — маскот (правка владельца 2026-10-18: «замени квадрат-указатель на маскота»): подошвы на точке пути
    (fly.js, ay), высота 72 макета, не ниже 48 px; поворот по ходу — 0,4 с, подскок на ходу ставит fly.js */
-.fl--bunny { pointer-events: none; }
+.fl--bunny { z-index: 1; pointer-events: none; }   /* поверх знака метро и плашек (правка владельца 2026-10-20: зайчик выходит из метро) */
 .fl__hop { display: block; transform-origin: 50% 95.77%; }   /* масштаб по дальности (fly.js) — вокруг подошв */
 .fl--end .fl__hop { transform-origin: 50% 96.41%; }
-.fl--walker.is-behind:not(.is-off) { opacity: .35; }   /* за домом — прозрачный, как путь за домами */
+.fl--walker.is-behind:not(.is-off) { opacity: .35; }   /* за домом — прозрачный; только без второго холста (fly.js, «Зайчик за домами») */
+/* второй холст: поверх зайчика дорисовывает дома, которые стоят перед ним (правка владельца 2026-10-21: «маскот просматривается
+   сквозь стены»); после зайчиков в разметке, тот же z-index — поверх них, под панелью «Время в пути» (z-index 2) */
+.fly__over { position: absolute; inset: 0; z-index: 1; display: block; width: 100%; height: 100%; pointer-events: none; }
 .fl__bunny { display: block; width: auto; height: max(48px, calc(72 * var(--u))); aspect-ratio: 769 / 1490; transition: transform .4s var(--ease-in-out); user-select: none; -webkit-user-drag: none; }
+/* выход из метро (правка владельца 2026-10-20: «заяц не выходит из метро»): у знака «М» шагающий проявляется и поднимается
+   снизу на 40 % роста за 0,8 с (обратно — уходит вниз и гаснет); translate — отдельное свойство, transform ставит fly.js */
+.fl--walker { transition: opacity var(--dur-m) var(--ease-out); }
+.fl--walker .fl__bunny { transition: transform .4s var(--ease-in-out), translate var(--dur-m) var(--ease-out); }
+.fl--walker.is-off:not(.is-end) .fl__bunny { translate: 0 40%; }
+/* у конца пути шагающий гаснет на месте, а «привет» проявляется там же (правка владельца 2026-10-21: «маскот отходит в сторону») */
 .fl--end .fl__bunny { aspect-ratio: 843 / 1477; }
 
 /* ---------- Уже 1024: подпись остановки снизу во всю ширину, камера отходит (fly.js) ---------- */
@@ -128,4 +163,56 @@
 .fly.is-reduced .fly__steps { position: static; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 32px 40px; width: auto; padding: var(--fly-pad); pointer-events: auto; }
 .fly.is-reduced .fly__step { grid-area: auto; opacity: 1; visibility: visible; transform: none; transition: none; }
 .fly.is-reduced .fly__osm { display: none; }
-@media (prefers-reduced-motion: reduce) { .fl, .fl__bunny { transition: none; animation: none; } }
+@media (prefers-reduced-motion: reduce) { .fl, .fl__bunny, .fl--walker, .fl--walker .fl__bunny { transition: none; animation: none; } }
+
+/* ---------- Правки адаптива 2026-10-20 (сессия arka-123-e8; окно владельца ≈ 1280 × 533 и 1023 × 535 при 125 %) ---------- */
+/* «Пешком»: время и подпись у всех четырёх мест — с верха ячейки (правка владельца на 1280: «тексты „метро «Восток»“ и
+   „Национальная библиотека“ не по одной силовой линии»): ячейки строки одной высоты, и раньше двухстрочная подпись соседа
+   растягивала строки ячейки — время и подпись «метро «Восток»» уезжали вниз */
+.loc__walk li { align-content: start; }
+/* Панель в сцене на 1280–1439: тексты на 2 px мельче («уменьши размеры текстов на 2 px, сейчас они большие») */
+@media (min-width: 1280px) and (max-width: 1439.98px) {
+  .fly.is-panel-in .fly__stage > .fly__panel .loc__to, .fly.is-panel-in .fly__stage > .fly__panel .loc__unit { font-size: 14px; line-height: 20px; }
+  .fly.is-panel-in .fly__stage > .fly__panel .loc__walk .loc__num { font-size: 38px; }
+  .fly.is-panel-in .fly__stage > .fly__panel .loc__car .loc__num { font-size: 28px; }
+}
+@media (min-width: 1280px) and (max-width: 1439.98px) and (max-height: 820px) {
+  .fly.is-panel-in .fly__stage > .fly__panel .loc__walk .loc__num { font-size: 34px; }
+  .fly.is-panel-in .fly__stage > .fly__panel .loc__car .loc__num { font-size: 26px; }
+}
+@media (min-width: 1280px) and (max-width: 1439.98px) and (max-height: 640px) {
+  .fly.is-panel-in .fly__stage > .fly__panel .loc__walk .loc__num { font-size: 30px; }
+  .fly.is-panel-in .fly__stage > .fly__panel .loc__car .loc__num { font-size: 22px; }
+}
+/* Уже 1280 панель под картой — плашкой цвета фона карты, как панель в сцене на компьютере, и компактно: «Пешком» и «На машине»
+   рядом в две колонки (правки владельца на 1279, 1024 и 1023: «верни цвет фона… реализуй компактнее, сейчас очень растянуто»);
+   на телефоне — столбиком. Подпись данных OpenStreetMap — только на самой карте (на 1024: «текст дублируется — оставь только
+   в карте»); без JS и WebGL карты нет — подпись остаётся в панели. */
+@media (max-width: 1279.98px) {
+  /* колонки поровну: промежуток между «Пешком» и «На машине» — на центральной оси, как линия «Вопросов» ниже (правка владельца
+     2026-10-21 на 1279–1024 и 1023–768: «середина текстового контента и линия следующего блока не сходятся по центральной силовой
+     линии»; было 1 : 1,25 — середина промежутка на 36–96 px левее оси; arka-123-e5) */
+  .fly__stage + .fly__panel, .fly__panel { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: auto 1fr auto; column-gap: 48px; margin-top: 0; padding: 32px 40px; background: var(--page); }
+  .fly__panel .loc__cap { grid-column: 1; grid-row: 1; margin-bottom: 12px; }
+  .fly__panel .loc__walk { grid-column: 1; grid-row: 2; align-self: start; gap: 16px 24px; }
+  .fly__panel .loc__cap--car { grid-column: 2; grid-row: 1; margin-top: 0; }
+  .fly__panel .loc__car { grid-column: 2; grid-row: 2; align-self: start; }
+  .fly__panel .loc__osm { grid-column: 1 / -1; grid-row: 3; margin-top: 16px; }
+  .fly.is-live .fly__panel .loc__osm { display: none; }
+  .fly__panel .loc__to, .fly__panel .loc__unit { font-size: 14px; line-height: 20px; }
+  .fly__panel .loc__walk .loc__ico { width: 20px; height: 20px; min-width: 20px; min-height: 20px; margin-bottom: 8px; }
+  .fly__panel .loc__walk .loc__num { font-size: 32px; line-height: 36px; }
+  .fly__panel .loc__walk .loc__unit { padding-bottom: 4px; }
+  .fly__panel .loc__walk .loc__to { margin-top: 2px; }
+  .fly__panel .loc__car li { height: 44px; }
+  .fly__panel .loc__car .loc__num { width: 36px; min-width: 36px; font-size: 24px; line-height: 28px; }
+  .fly__panel .loc__car .loc__unit { width: 32px; min-width: 32px; }
+}
+@media (max-width: 767.98px) {
+  .fly__stage + .fly__panel, .fly__panel { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; padding: 24px 20px; }
+  .fly__panel .loc__cap, .fly__panel .loc__walk, .fly__panel .loc__cap--car, .fly__panel .loc__car, .fly__panel .loc__osm { grid-column: 1; grid-row: auto; }
+  .fly__panel .loc__cap--car { margin-top: 24px; }
+}
+@media (max-width: 389.98px) {
+  .fly__stage + .fly__panel, .fly__panel { padding: 20px 16px; }
+}

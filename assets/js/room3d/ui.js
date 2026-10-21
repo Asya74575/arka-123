@@ -15,6 +15,10 @@
   var ICON_RESET = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3A8.99 8.99 0 0 0 13 3.06V1h-2v2.06A8.99 8.99 0 0 0 3.06 11H1v2h2.06A8.99 8.99 0 0 0 11 20.94V23h2v-2.06A8.99 8.99 0 0 0 20.94 13H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/></svg>';   // Material Icons (Apache 2.0): my_location
   var ICON_FULL = '<svg class="room3d__ifull" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>' +   // Material Icons: fullscreen
     '<svg class="room3d__iexit" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/></svg>';   // fullscreen_exit
+  // «+» и «−» — линии 1,5 px (правка владельца 2026-10-21: «знак + намного тоньше… на 0,5 px больше», L193), векторные, как
+  // значки рядом: толщина одна при любом положении кнопки на экране (линию CSS 1,5 px браузер ставил то в 1, то в 2 пикселя)
+  var sign = function (d) { return '<svg class="room3d__sign" viewBox="0 0 18 18" aria-hidden="true"><path d="' + d + '"/></svg>'; };
+  var ICON_IN = sign('M0 9H18M9 0V18'), ICON_OUT = sign('M0 9H18');
 
   R.createUi = function (root, layer, opts) {
     var labelsOn = true, stage = root.querySelector('.room3d__stage');
@@ -30,7 +34,7 @@
     zoom.className = 'room3d__zoom';
     // Подпись кнопки — при наведении мышью (room3d.css, .room3d__ztip): у всех четырёх кнопок, а не только у «Вернуть вид»
     var tip = function (t) { return '<span class="room3d__ztip" aria-hidden="true">' + t + '</span>'; };
-    zoom.innerHTML = '<div class="room3d__zpair" role="group" aria-label="Масштаб модели"><button class="room3d__zbtn room3d__zbtn--in" type="button" aria-label="Приблизить">' + tip('Приблизить') + '</button><button class="room3d__zbtn room3d__zbtn--out" type="button" aria-label="Отдалить">' + tip('Отдалить') + '</button></div>' +
+    zoom.innerHTML = '<div class="room3d__zpair" role="group" aria-label="Масштаб модели"><button class="room3d__zbtn room3d__zbtn--in" type="button" aria-label="Приблизить">' + ICON_IN + tip('Приблизить') + '</button><button class="room3d__zbtn room3d__zbtn--out" type="button" aria-label="Отдалить">' + ICON_OUT + tip('Отдалить') + '</button></div>' +
       '<button class="room3d__zbtn room3d__zbtn--reset" type="button" aria-label="Вернуть вид">' + ICON_RESET + tip('Вернуть вид') + '</button>' +
       '<button class="room3d__zbtn room3d__zbtn--full" type="button" aria-label="На весь экран" aria-pressed="false">' + ICON_FULL + tip('На&nbsp;весь экран') + '</button>';
     var zin = zoom.querySelector('.room3d__zbtn--in'), zout = zoom.querySelector('.room3d__zbtn--out'), full = zoom.querySelector('.room3d__zbtn--full');

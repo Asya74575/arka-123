@@ -30,7 +30,10 @@
           onComplete: function () { gsap.set(chars, { clearProps: 'transform,opacity' }); if (--left <= 0) menu.classList.remove('is-revealing'); } });
       });
     }
-    gsap.fromTo(menu.querySelectorAll('.menu__contacts > *, .menu__buttons > *'), { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 1.2, ease: window.ARKA.easeOut || 'power3.out', stagger: .05, delay: .6, overwrite: true });
+    // подъём — не глубже нижнего поля панели (уже 1024 — 32): когда меню помещается в окно впритык, кнопки внизу при подъёме с 40
+    // выходили за край, на 0,9 с появлялась полоса прокрутки, и меню прыгало на её ширину (2026-10-21, arka-123-de; 390 × 640, 767 × 537)
+    var lift = Math.min(40, parseFloat(getComputedStyle(panel).paddingBottom) || 40);
+    gsap.fromTo(menu.querySelectorAll('.menu__contacts > *, .menu__buttons > *'), { y: lift, opacity: 0 }, { y: 0, opacity: 1, duration: 1.2, ease: window.ARKA.easeOut || 'power3.out', stagger: .05, delay: .6, overwrite: true });
   }
   function open() {
     clearTimeout(closeTimer);

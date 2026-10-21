@@ -50,6 +50,14 @@
 .arc { position: absolute; left: 0; top: 0; width: 100%; height: auto; overflow: visible; pointer-events: none; }
 .arc text { font-family: var(--font-display); fill: var(--ink); }
 .arc--t, .arc--m { display: none; }
+/* Надпись по дуге уже 1024 — кеглем в px, а не долей рисунка (правка владельца 2026-10-21 на 1023: «текст с Н2 одинаковой
+   высоты»; на 767–320: «больше Н2 и вылазит за границы»; arka-123-74): рисунок дуги растёт с окном, кегль — нет, arch.js
+   переводит font-size рисунка в единицы рисунка. 768–1023 — 26 (на 1024 надпись 27,7 — шкала не растёт к узким), 391–767 — 19,
+   320–390 — 16; разлёт слов на телефоне — 0,5 кегля (data-spread 12 у рисунка 390, было 20): самая длинная надпись («Режим
+   работы…») стоит в полях окна, а пока расходится — не ближе 8 px к краю (было: на 320 уходила за край). Без JS — прежний кегль */
+@media (max-width: 1023.98px) { .arc { font-size: 26px; } }
+@media (max-width: 767.98px) { .arc { font-size: 19px; } }
+@media (max-width: 390.98px) { .arc { font-size: 16px; } }
 /* Метка стоит от надписи по дуге, как в макете (верх дуги 131 → верх метки 224, 93 макета): надпись — рисунок во всю ширину (--u),
    поэтому и место метки — в --u; линия короче на столько же, и до заголовка остаётся прежний зазор. На низком окне метка
    раньше поднималась вместе с высотой окна (--s) и наезжала на «НАПРОТИВ» (правка владельца 2026-10-18: «тексты слиплись,
@@ -98,10 +106,42 @@
   .pager__current { position: absolute; left: 0; top: 0; width: 33.334%; height: 100%; background: var(--ink); will-change: transform; }
   @media (hover: hover) { .pager__arrow:not([aria-disabled="true"]):hover { opacity: .6; } }
 }
+/* 1024–1439 (правки владельца 2026-10-20, окно ≈ 1280 × 533 при 125 %; arka-123-e8): экран слайдов — ровно окно, без нижнего
+   предела 600 px: на невысоком окне экран был выше окна, его низ (листалка) уходил за край, а заголовок слайда стоял ниже
+   места, где тексты появляются, — «в карточках пропали заголовки». Листалка — на 10 px ниже («опусти элементы слайдера»). */
+@media (min-width: 1024px) and (max-width: 1439.98px) {
+  .has-motion .windows__screen { min-height: 0; }
+  .has-motion .pager { top: calc(50% + 416 * var(--s) + 10px); }
+}
+/* 1280–1439 (правки владельца 2026-10-21, окно ≈ 1437 × 534 при 125 %: «заголовок очень близко к фото, сделай отступ 20 px +
+   текстовые контенты отцентрируй относительно фото с заголовком»; arka-123-51). На невысоком окне заголовок блока стоял на фото
+   (−5 px). Заголовок, метка и линия стоят на прежних местах (линия — одной меры с линиями других арок, L181; зазор «Второй
+   этаж» → заголовок прежний, L137), а экран слайдов начинается ниже ровно настолько, чтобы от заголовка до фото было не меньше
+   20 px: шапка блока выше на 20 − (50svh − 416 --s верх фото на экране слайдов + 60 --s от низа заголовка до низа шапки
+   блока − вторая строка заголовка), если это больше нуля; две строки заголовка — 2,4em = max(96px, 144 --s). На высоком окне
+   прибавки нет (там 67–75 px). Факты и текст — по середине группы «фото +
+   заголовок слайда» (−416 … +328 --s и строка заголовка 1,2em), а не на своих местах макета. */
+@media (min-width: 1280px) and (max-width: 1439.98px) {
+  .windows__head { height: calc(788 * var(--s) + max(0px, calc(356 * var(--s) - 50svh + 20px + max(96px, 144 * var(--s))))); }
+  .slide__facts, .slide__desc { top: calc(50% - 44 * var(--s) + max(24px, 36 * var(--s))); transform: translateY(-50%); }
+}
+/* 1024–1279 (правки владельца 2026-10-20 на 1024: «текст прилип к нижней границе картинки», «тексты слева и справа отцентрируй —
+   сейчас по нижней силовой линии», «элемент слайдера прилип к заголовку, добавь 10 px»): фото, под ним через 12 px заголовок,
+   через 10 px листалка — одной группой по центру между шапкой и низом окна; на невысоком окне фото ниже (--ph), чтобы группа
+   поместилась. Факты слева и текст справа — по середине фото. */
+@media (min-width: 1024px) and (max-width: 1279.98px) {
+  .windows { --ph: min(calc(784 * var(--s)), calc(100svh - var(--header-h) - 130px)); --pw: calc(var(--ph) * 585 / 784); --gtop: calc(var(--header-h) + (100svh - var(--header-h) - var(--ph) - 94px) / 2); }
+  .slide__photo { top: var(--gtop); width: var(--pw); height: var(--ph); margin-left: calc(var(--pw) / -2); }
+  .slide__title { top: calc(var(--gtop) + var(--ph) + 12px); }
+  .slide__facts { right: calc(50% + var(--pw) / 2 + var(--slide-pad)); top: calc(var(--gtop) + var(--ph) / 2); max-width: calc(50% - var(--pw) / 2 - var(--slide-pad) - var(--gutter)); transform: translateY(-50%); }
+  .slide__desc { left: calc(50% + var(--pw) / 2 + var(--slide-pad)); top: calc(var(--gtop) + var(--ph) / 2); max-width: calc(50% - var(--pw) / 2 - var(--slide-pad) - var(--gutter)); transform: translateY(-50%); }
+  .has-motion .pager { top: calc(var(--gtop) + var(--ph) + 70px); }
+}
 
 /* ---------- Планшет и телефон: без ленты; арка — круг шире экрана (радиус 0,75 ширины) ---------- */
 @media (max-width: 1023.98px) {
   .windows__circle { width: 150cqw; margin-left: -75cqw; transform: none; }
+  .windows__shape { overflow: hidden; }   /* блок со слайдером ниже круга арки: низ круга не выходит на «О нас» (2026-10-20) */
   .windows__rect { top: 75cqw; }
   .arc--d { display: none; }
   .arc--t { display: block; }
@@ -109,15 +149,34 @@
   .windows__mark { position: static; transform: none; margin-inline: auto; }
   .windows__mark .mark__line { height: 160px; }
   .windows__title { position: static; width: auto; max-width: 600px; margin: 48px auto 0; transform: none; }
-  .windows__pin { padding: 48px var(--gutter) 80px; }
-  .windows__track { gap: 80px; }
-  .slide { display: grid; grid-template-columns: 1fr 1fr; gap: 24px 32px; height: auto; min-height: 0; max-width: 720px; margin-inline: auto; }
+  /* Слайды — лентой вбок со стрелками и полосой хода, как на компьютере (правка владельца 2026-10-20 на 1023: «карточки идут
+     одна под одной — реализовать слайдер и уменьшить высоту карточек, чтобы они помещались в экране»; arka-123-e8).
+     Ленту ведёт glide.js (мышь, палец, стрелки — плавно, как «Фото»), стрелки и полосу — hscroll.js. Карточка: фото слева
+     по высоте текста (object-fit: cover), справа заголовок, факты, текст и кнопка; на телефоне — столбиком, фото 4 : 3. */
+  .windows__pin { padding: 48px 0 64px; }
+  /* Между карточками 64 — вдвое больше промежутка «фото — текст» внутри карточки (32): при 24 текст «липнул» к фото соседней
+     карточки (правка владельца 2026-10-21 на 768: «путаница, текстовый контент к какому фото относится», L92; arka-123-51) */
+  .windows__track { flex-direction: row; gap: 64px; padding: 0 var(--gutter); overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scroll-padding-inline: var(--gutter); scrollbar-width: none; }
+  .windows__track::-webkit-scrollbar { display: none; }
+  .slide { flex: 0 0 100%; display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); grid-template-rows: auto auto 1fr; column-gap: 32px; row-gap: 20px; align-content: center; height: auto; min-height: 0; overflow: visible; scroll-snap-align: start; }
   .slide__photo, .slide__title, .slide__facts, .slide__desc { position: static; transform: none; margin: 0; }
-  .slide__photo { grid-column: 1 / -1; width: 100%; height: auto; aspect-ratio: 4 / 5; }
-  .slide__title { grid-column: 1 / -1; width: auto; margin-top: -40px; }
-  .slide__facts { grid-column: 1 / -1; grid-template-columns: 1fr 1fr; gap: 24px 32px; width: auto; max-width: none; }
-  .fact { gap: 4px; }
-  .slide__desc { grid-column: 1 / -1; width: auto; max-width: none; gap: 24px; }
+  .slide__photo { position: relative; left: auto; top: auto; grid-column: 1; grid-row: 1 / -1; align-self: stretch; width: 100%; height: auto; min-height: 320px; }
+  .slide__photo img { position: absolute; inset: 0; }   /* высоту фото задаёт колонка текста, а не пропорции снимка */
+  .slide__title { grid-column: 2; width: auto; text-align: left; }
+  /* заголовок карточки мельче заголовка блока (40): 36/44 (правка владельца 2026-10-21 на 1023–768: «заголовки карточек
+     конкурируют с Н2, уменьши на 2–4 px»; arka-123-51) */
+  .windows .slide__title { font-size: 36px; line-height: 44px; }
+  .slide__facts { grid-column: 2; grid-template-columns: 1fr 1fr; gap: 16px 24px; width: auto; max-width: none; }
+  .fact { grid-template-rows: 1fr auto; gap: 4px; }   /* значения соседних фактов — на одной линии, когда подпись слева в две строки, справа в одну (2026-10-21, arka-123-51) */
+  .slide__desc { grid-column: 2; width: auto; max-width: none; gap: 20px; }
+  .pager { display: flex; align-items: center; justify-content: center; gap: 24px; margin-top: 32px; }
+  .windows .pager__arrow { position: relative; display: grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 0; background: none; color: var(--ink); transition: opacity var(--dur-s) var(--ease-out); }
+  .windows .pager__arrow::before { content: ""; position: absolute; inset: -12px; }
+  .windows .pager__arrow svg { width: 100%; height: 100%; }
+  .windows .pager__arrow[aria-disabled="true"] { opacity: .3; cursor: default; }
+  .windows .pager__track { position: relative; width: 160px; height: 1px; background: var(--line); overflow: hidden; }
+  .windows .pager__current { position: absolute; left: 0; top: 0; width: 33.334%; height: 100%; background: var(--ink); will-change: transform; }
+  html:not(.js) .windows .pager { display: none; }
 }
 @media (max-width: 767.98px) {
   .arc--t { display: none; }
@@ -125,27 +184,80 @@
   .windows__head { padding-top: 112px; }
   .windows__mark .mark__line { height: 120px; }
   .windows__title { margin-top: 40px; }
-  .windows__pin { padding: 40px var(--gutter) 64px; }
-  .windows__track { gap: 64px; }
-  .slide { gap: 20px 16px; }
-  .slide__title { margin-top: -28px; }
-  .slide__facts { gap: 20px 16px; }
+  .windows__pin { padding: 40px 0 64px; }
+  .windows .slide__title { font-size: 28px; line-height: 32px; }   /* мельче заголовка блока (32), как на 768–1023 (2026-10-21, arka-123-51) */
+  .pager { margin-top: 24px; }
+}
+/* 480–767 — карточка как на 768: фото слева по высоте текста, кнопка по подписи (правка владельца 2026-10-21 на 767: «переделай
+   карточки под формат 768 px, сейчас фото большое + кнопка здоровая на всю ширину экрана»; ответ — «480–767», arka-123-51).
+   Факты — в две колонки, пока каждая не уже 140 px, на узкой колонке текста — одна под другой (иначе подпись по слову в строку).
+   Колонка текста не уже кнопки «Арендовать помещение» (35em / 3 + 64, как .btn в base.css): на 480 при 2 : 3 она 245, кнопка
+   251 выходила за край карточки — фото уступает эти 6 px. */
+@media (min-width: 480px) and (max-width: 767.98px) {
+  .slide { grid-template-columns: minmax(0, 2fr) minmax(calc(35em / 3 + 64px), 3fr); }
+  .slide__facts { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+}
+/* Уже 480 — карточка столбиком, фото 4 : 3 сверху. От заголовка блока до фото 20 (правка владельца 2026-10-21 на 390–320:
+   «сделай меньше отступ между заголовком и фото, 16–20 px»; ответ — «где фото сверху»; было 40). Между карточками 32 — вдвое
+   больше промежутка внутри карточки (16), как на 768 (L92). */
+@media (max-width: 479.98px) {
+  .windows__pin { padding-top: 20px; }
+  .windows__track { gap: 32px; }
+  .slide { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; align-content: start; row-gap: 16px; }
+  .slide__photo { grid-column: 1; grid-row: auto; min-height: 0; aspect-ratio: 4 / 3; }
+  .slide__title, .slide__facts, .slide__desc { grid-column: 1; }
+  .slide__facts { gap: 16px; }
   .slide__desc .btn { width: 100%; }
+}
+/* 320–389: заголовок блока 28 — заголовок карточки 26, на 2 px мельче и всё же крупнее значений фактов (24) */
+@media (max-width: 389.98px) {
+  .windows .slide__title { font-size: 26px; line-height: 30px; }
 }
 
 /* ---------- Первый экран: планшет и телефон ---------- */
+/* Уже 1440 первый экран не выше окна до 420 px (правка владельца 2026-10-20, окно ≈ 1280 × 533 и 1023 × 535: «в хероблоке
+   пропала текстовая информация, верни её» — при нижнем пределе 600 строка фактов стояла за нижним краем окна; arka-123-e8) */
+@media (max-width: 1439.98px) {
+  .hero { min-height: 420px; }
+}
+/* 1024–1439: от кнопки до фактов — не меньше 60 px (правка владельца 2026-10-21, окно ≈ 1434 × 530 при 125 %: «тексты
+   Просторный лофт 123 м²… и линии прижались к кнопке, сделай отступ между кнопкой и текстами в 60 px + также увеличь высоту
+   херо блока»; было 3–15 px на окнах ≈ 530). Те же места, что раньше, но в потоке: заголовок с кнопкой — от середины окна,
+   факты — у низа экрана; на невысоком окне экран растёт под содержимое, и пока его низ не дошёл до низа окна, он
+   прокручивается, а потом закрепляется (hero-fit.js). Заголовок на невысоком окне поднят ровно настолько, чтобы факты при
+   открытии были видны целиком, в 24 px от края (--hero-g — высота заголовка, кнопки, 60 и фактов, hero-fit.js), но не
+   ближе 24 px к шапке. На высоком окне — как было (промежуток 130–190 px). arka-123-de */
+@media (min-width: 1024px) and (max-width: 1439.98px) {
+  .hero { display: flex; flex-direction: column; height: auto; min-height: max(100svh, 420px); padding-top: max(calc(var(--header-h) + 24px), min(calc(max(100svh, 420px) / 2 - 214 * var(--s)), calc(100svh - 24px - var(--hero-g, 0px)))); padding-bottom: calc(100 * var(--s)); }
+  .hero__content { position: relative; left: auto; top: auto; transform: none; flex: none; align-self: center; margin-bottom: 60px; }
+  .hero__facts { position: relative; left: auto; right: auto; bottom: auto; flex: none; margin: auto var(--gutter) 0; }
+}
 @media (max-width: 1023.98px) {
   .hero__photo img, .hero__video { object-position: 30% 50%; }
-  .hero__content { top: auto; bottom: calc(50% - 40px); left: var(--gutter); right: var(--gutter); width: auto; max-width: none; transform: none; gap: 32px; }
+  /* заголовок и кнопка — по центру экрана (правка владельца 2026-10-21 на 1023 и 768: «отцентрируй текст с кнопкой по центру
+     экрана», arka-123-e6; было — по центру между шапкой и строкой фактов, на 7–8 px выше середины): поля сверху и снизу
+     равные, 88 — выше шапки (72) и строки фактов (низ в 40 + 20) */
+  .hero__content { top: 88px; bottom: 88px; left: var(--gutter); right: var(--gutter); width: auto; max-width: none; transform: none; gap: 32px; align-content: center; }
   .hero__title { width: auto; }
-  .hero__facts { left: var(--gutter); right: var(--gutter); bottom: 40px; justify-content: center; flex-wrap: wrap; gap: 8px 24px; }
-  .hero__fact { min-width: 0; font-size: 16px; line-height: 24px; text-align: center !important; }
-  .hero__line { display: none; }
+  /* факты — одной строкой с линиями, как на компьютере (правка владельца 2026-10-20: «верни её», скрин 31) */
+  .hero__facts { left: var(--gutter); right: var(--gutter); bottom: 40px; justify-content: center; gap: 0 20px; }
+  .hero__fact { min-width: 0; font-size: 14px; line-height: 20px; text-align: center !important; }   /* 14: при 16 строка на 768 не помещается */
+  .hero__line { flex: 0 1 calc(280 * var(--u)); min-width: 16px; }
 }
+/* Телефон, уже 768 (правки владельца 2026-10-21 на 767 и 480, arka-123-de): видео сверху, заголовок и кнопка под ним
+   («реализуй видео сверху, а Н1 и кнопку под видео; переход должен быть плавным, чтобы не было чётких границ»; ответ —
+   «весь телефон, уже 768»). Видео занимает всё, что осталось над текстом, его низ растворяется в фоне --ink, а заголовок
+   встаёт на растворённый край. Кнопка — 320 («кнопка очень здоровая, сделай по ширине 320»), факты скрыты («скрой этот
+   текст и на адаптивах меньших»). Высота экрана прежняя — окно (min 420). */
 @media (max-width: 767.98px) {
-  .hero__content { bottom: auto; top: calc(var(--header-h) + max(24px, (100svh - 640px) * .35)); gap: 24px; }
-  .hero__content .btn { width: 100%; }
-  .hero__facts { flex-direction: column; gap: 4px; bottom: 24px; }
+  .hero { display: flex; flex-direction: column; background: var(--ink); }
+  .hero__photo { position: relative; inset: auto; flex: 1 1 auto; min-height: 160px; margin-bottom: -64px;
+    -webkit-mask-image: linear-gradient(#000 45%, rgb(0 0 0 / .55) 70%, transparent);
+    mask-image: linear-gradient(#000 45%, rgb(0 0 0 / .55) 70%, transparent); }
+  .hero__shade--bottom { display: none; }
+  .hero__content { position: relative; inset: auto; z-index: 1; flex: none; width: auto; max-width: none; transform: none; gap: 24px; align-content: start; padding: 0 var(--gutter) 32px; }
+  .hero__content .btn { width: min(320px, 100%); }
+  .hero__facts { display: none; }
 }
 
 /* Ручные переносы заголовков макета — только на компьютере */
@@ -167,24 +279,25 @@
    Пауза --under-hold — у «Вопросов» и у 3D-модели «Наше помещение» (с 2026-10-19; та же правка: «зафиксируй блок FAQ с достаточным отступом внизу экрана +
    задержка скролла 1–2 с + появление блока формы»): вопросы встали целиком и стоят ещё 600 px прокрутки (≈ 6 щелчков
    колеса, 1–2 с) — последние вопросы успевают дочитать; потом поднимается арка формы. Промежуток и подъём арки
-   длиннее на столько же. */
+   длиннее на столько же.
+   С 2026-10-21 — на всех ширинах (правка владельца на 1023 и 390–320: «отсутствует анимация наложения фона блока „Один
+   солнечный зал…“»; было только от 1024, уже — блоки шли друг за другом; arka-123-74). Уже 1024 круг арки не расширяется
+   (он и так шире экрана, 150cqw): углы закрыты, когда верх арки ушёл за край на 19cqw, запас 28,125cqw его покрывает. */
 .arch-gap { display: none; }
-@media (min-width: 1024px) {
-  .has-motion .under-wrap { --under-hold: 0px; }
-  .has-motion .faq-wrap { --under-hold: 600px; }
-  .has-motion .about-wrap { --under-hold: 600px; }   /* та же пауза у 3D-модели (правка владельца 2026-10-19: «фон следующего блока быстро налазит на 3D-модель, сделай задержку») */
-  .has-motion .under-wrap.is-under > .arch-gap { display: block; height: calc(100svh + 28.125cqw + var(--under-hold)); }
-  .has-motion .under-wrap.is-under > [data-arch-under] { position: sticky; top: var(--under-top, 0px); }
-  .has-motion .under-wrap.is-under + [data-arch-next] { margin-top: calc(-100svh - 28.125cqw); }
-  /* Блок арки лежит поверх закреплённого блока с самого начала подъёма. Щелчок проходит к закреплённому блоку только сквозь
-     пустую часть блока арки (над дугой, по бокам); сама нарисованная арка (.ashape__c, .ashape__r) его ловит — спрятанное под
-     ней не нажимается. Шапка арки (метки, заголовок — ничего нажимаемого) щелчки пропускает к арке под ней. Иначе прозрачная
-     шапка закрывала видимые углы закреплённого блока: + / − 3D-модели, вопросы у краёв (2026-10-18, arka-123-a0, L135) */
-  .has-motion .under-wrap.is-under + [data-arch-next] { pointer-events: none; }
-  .has-motion .under-wrap.is-under + [data-arch-next] > :not(.ahead):not(.ashape),
-  .has-motion .under-wrap.is-under + [data-arch-next] .ashape__c,
-  .has-motion .under-wrap.is-under + [data-arch-next] .ashape__r { pointer-events: auto; }
-}
+.has-motion .under-wrap { --under-hold: 0px; }
+.has-motion .faq-wrap { --under-hold: 600px; }
+.has-motion .about-wrap { --under-hold: 600px; }   /* та же пауза у 3D-модели (правка владельца 2026-10-19: «фон следующего блока быстро налазит на 3D-модель, сделай задержку») */
+.has-motion .under-wrap.is-under > .arch-gap { display: block; height: calc(100svh + 28.125cqw + var(--under-hold)); }
+.has-motion .under-wrap.is-under > [data-arch-under] { position: sticky; top: var(--under-top, 0px); }
+.has-motion .under-wrap.is-under + [data-arch-next] { margin-top: calc(-100svh - 28.125cqw); }
+/* Блок арки лежит поверх закреплённого блока с самого начала подъёма. Щелчок проходит к закреплённому блоку только сквозь
+   пустую часть блока арки (над дугой, по бокам); сама нарисованная арка (.ashape__c, .ashape__r) его ловит — спрятанное под
+   ней не нажимается. Шапка арки (метки, заголовок — ничего нажимаемого) щелчки пропускает к арке под ней. Иначе прозрачная
+   шапка закрывала видимые углы закреплённого блока: + / − 3D-модели, вопросы у краёв (2026-10-18, arka-123-a0, L135) */
+.has-motion .under-wrap.is-under + [data-arch-next] { pointer-events: none; }
+.has-motion .under-wrap.is-under + [data-arch-next] > :not(.ahead):not(.ashape),
+.has-motion .under-wrap.is-under + [data-arch-next] .ashape__c,
+.has-motion .under-wrap.is-under + [data-arch-next] .ashape__r { pointer-events: auto; }
 .ahead { position: relative; z-index: 1; height: calc(912 * var(--u)); }
 .ahead__mark { position: absolute; left: 50%; top: calc(225 * var(--u)); transform: translateX(-50%); white-space: nowrap; }
 .ahead__title { position: absolute; left: 50%; top: calc(728 * var(--u)); width: 15.333em; transform: translateX(-50%); text-align: center; }
@@ -192,6 +305,23 @@
 .ahead--rent .ahead__mark { top: calc(206 * var(--u)); }
 .ahead--rent .ahead__title { top: calc(710 * var(--u)); }
 .ahead__sub { position: absolute; left: 50%; top: calc(870 * var(--u)); width: calc(760 * var(--u)); min-width: min(560px, 100% - 2 * var(--gutter)); transform: translateX(-50%); text-align: center; }
+/* 1024–1439: подписи «текст — линия — текст» у всех арок и линии над разделами — одной меры с аркой «Окна» (правка владельца
+   2026-10-20, окно ≈ 1280 × 533: «элементы сейчас разной высоты на всём сайте, ориентируйся на блок „Поменяйте комнату без окон“»;
+   arka-123-e8). У «Окон» линия и заголовок считаются от высоты окна (--s, L137), у остальных — только от ширины (--u): на высоком
+   окне они совпадают (200 на 1280 × 800), на невысоком у «Окон» линия короче. Теперь у всех — как у «Окон»: метка 224 макета
+   от верха арки, линия max(48, 524 --s − 224 --u), промежутки 24 --s, заголовок на 728 --s.
+   Форма аренды: под заголовком через 12 px подзаголовок, под ним через 24 px форма («отступы: заголовок — подзаголовок 10–12,
+   подзаголовок — поле 20–24»). */
+@media (min-width: 1024px) and (max-width: 1439.98px) {
+  .mark { --k: var(--s); }
+  .mark__line, .windows__mark .mark__line { height: max(48px, calc(524 * var(--s) - 224 * var(--u))); }
+  .ahead { height: calc(184 * var(--u) + 728 * var(--s)); }
+  .ahead__mark, .ahead--rent .ahead__mark { top: calc(224 * var(--u)); }
+  .ahead__title { top: calc(728 * var(--s)); }
+  .ahead--rent { height: auto; padding: calc(728 * var(--s)) var(--gutter) 24px; }
+  .ahead--rent .ahead__title, .ahead--rent .ahead__sub { position: relative; left: auto; top: auto; transform: none; margin-inline: auto; }
+  .ahead--rent .ahead__sub { margin-top: 12px; }
+}
 
 /* ---------- 5.5. «О нас»: фото зала на весь экран (до 2026-10-19 — фасад), текст внизу слева ---------- */
 .about-wrap { position: relative; }
@@ -204,10 +334,24 @@
 .about__spacer { display: none; }
 @media (min-width: 1024px) {
   .has-motion .about { position: sticky; top: 0; background: var(--page); }
+  /* Фото — на 2 px ниже блока (правка владельца 2026-10-20: «при скролле внизу линия высотой 1 px появляется и дёргается»):
+     при дробной высоте окна (масштаб 125 %, встроенный просмотр VS Code — окно 729,6 px) закреплённый блок встаёт с дробным
+     сдвигом, и нижний ряд пикселей экрана оставался открыт — сквозь него мигал светлый фон. Запас под низом закрывает этот ряд
+     при любом сдвиге; overflow-clip-margin пускает фото за край блока только на эти 2 px. «Наше помещение» лежит выше (z-index 2) */
+  .has-motion .about { overflow: clip; overflow-clip-margin: 2px; }
+  .has-motion .about__photo { bottom: -2px; }
+  /* закреплённый блок — ровно окно, без нижнего предела 600 px (правка владельца 2026-10-20, 1439 × ≈ 520: «текст внизу
+     обрезается» — блок был выше окна, последняя строка уходила под край); уже 1024 блок не закреплён, предел остаётся (arka-123-7a) */
+  .has-motion .about { min-height: 0; }
   /* экран на рост фото + пауза --about-hold: фото с текстом стоит, пока прокрутка проходит ещё 1000 px (≈ 10 щелчков колеса,
      2–3 с), потом поднимается следующий блок (правка владельца 2026-10-19, вечер: «сделай задержку данного блока 2–3 сек»;
      about.js берёт паузу отсюда). Не --under-hold у .about-wrap — то пауза 3D-модели перед аркой «Форматов» (arka-123-ff) */
   .has-motion .about__spacer { --about-hold: 1000px; display: block; height: calc(100svh + var(--about-hold)); }
+}
+/* 1024–1439: под текстом не меньше 64 px фото (правка владельца 2026-10-20, окно ≈ 1280 × 533: «текст и низ картинки слиплись —
+   добавь внизу отступ»; на невысоком окне 100 макета в единице экранных блоков — 49 px) */
+@media (min-width: 1024px) and (max-width: 1439.98px) {
+  .about__text { bottom: max(64px, calc(100 * var(--s))); }
 }
 
 /* ---------- 5.6. Видео «Наше помещение» ---------- */
@@ -216,7 +360,11 @@
 /* С 2026-10-18 в большой рамке блока — 3D-модель зала (room3d.css), видеопрогулка — в рамке «Форматов» (правка владельца:
    «поменять местами видео и 3д-планирование помещения»; ведёт arka-123-a0). Кнопка плеера и пауза — у любого [data-video]. */
 .video__model { position: relative; margin: max(32px, calc(40 * var(--u))) 0 0; }   /* от заголовка до модели — 40 на 1920 (правка владельца 2026-10-19), не меньше 32, как у других блоков на планшете и телефоне */
-[data-video] video { display: block; width: 100%; height: 100%; object-fit: cover; cursor: pointer; }
+[data-video] video { display: block; width: 100%; height: 100%; object-fit: cover; cursor: pointer; opacity: .999; }
+/* opacity .999 (правка владельца 2026-10-21 на 1439–320: «в видео в определённое время появляется обводка картинки»;
+   arka-123-74): непрозрачное видео браузер на Windows выносит в отдельный слой видеокарты (overlay), когда оно играет и ничто
+   не мешает, и возвращает обратно при паузе и прокрутке; у слоя края — в целых пикселях, у рамки при 125 % — в дробных,
+   и по краю кадра на время мелькает линия. С прозрачностью .999 видео всегда рисуется вместе со страницей — без линии */
 .video__play { position: absolute; left: 50%; top: 50%; width: max(56px, calc(80 * var(--u))); aspect-ratio: 1; padding: 0; border: 0; border-radius: 50%; background: var(--surface); color: var(--ink); transform: translate(-50%, -50%); cursor: pointer; opacity: 0; visibility: hidden; transition: opacity var(--dur-s) var(--ease-out), visibility var(--dur-s), background-color var(--dur-m) var(--ease-out); }   /* кнопка плеера — Figma 966:730: круг 80, треугольник 20 × 24 (круг — по макету владельца) */
 .video__play svg { display: block; width: 100%; height: 100%; fill: currentColor; }
 @media (hover: hover) { .video__play:hover { background: var(--accent-press); } }
@@ -284,17 +432,22 @@ html:not(.js) .video__play { display: none; }
 .gallery__pager .pager__track { position: relative; width: calc(300 * var(--u)); min-width: 160px; height: 1px; background: var(--line); overflow: hidden; }
 .gallery__pager .pager__current { position: absolute; left: 0; top: 0; width: 33.334%; height: 100%; background: var(--ink); will-change: transform; }
 .gallery__hint { display: none; }
+@media (max-width: 1439.98px) { .gallery__pager { margin-top: 24px; } }   /* больше отступ от ленты до листалки (правка владельца 2026-10-20 на 1023) */
 
 /* Просмотр фото с листанием (gallery.js) */
 .viewer { position: fixed; inset: 0; z-index: 90; display: grid; grid-template-rows: 1fr auto; place-items: center; padding: calc(var(--header-h) + 8px) var(--gutter) 24px; background: rgb(51 41 32 / .94); opacity: 0; visibility: hidden; transition: opacity var(--dur-s) var(--ease-out), visibility var(--dur-s); }
 .viewer.is-open { opacity: 1; visibility: visible; }
+html:not(.is-locked) .viewer:not(.is-open) { right: calc(-1 * var(--sbw, 0px)); }   /* гаснет до прежнего края, а не прыгает на ширину вернувшейся полосы (L191) */
 .viewer__img { max-width: 100%; max-height: calc(100svh - var(--header-h) - 120px); width: auto; height: auto; object-fit: contain; }
 .viewer__bar { display: flex; align-items: center; gap: 24px; margin-top: 16px; color: var(--light); }
 .viewer__count { min-width: 64px; text-align: center; }
 .viewer__btn { display: grid; place-items: center; width: 56px; height: 56px; padding: 0; border: 1px solid rgb(244 239 231 / .4); background: none; color: var(--light); transition: background-color var(--dur-m) var(--ease-out), color var(--dur-m) var(--ease-out); }
 .viewer__btn svg { width: 24px; height: 24px; }
-.viewer__close { position: absolute; top: calc((var(--header-h) - 32px) / 2); right: var(--gutter); width: 59px; height: 32px; border: 0; background: var(--light); color: var(--ink); }
+/* крестик — по центру кнопки, как у меню (правка владельца 2026-10-20: «крестик сместился с центра в левую часть» —
+   svg по общему правилу display: block стоял у левого края); ширина чётная — 60 / 56, крестик 16 ровно посередине */
+.viewer__close { position: absolute; top: calc((var(--header-h) - 32px) / 2); top: round(calc((var(--header-h) - 32px) / 2), 1px); right: var(--gutter); right: round(var(--gutter), 1px); display: grid; place-items: center; width: 60px; height: 32px; padding: 0; border: 0; background: var(--light); color: var(--ink); }
 .viewer__close svg { width: 16px; height: 16px; }
+@media (max-width: 1023.98px) { .viewer__close { width: 56px; } }
 @media (hover: hover) { .viewer__btn:hover { background: var(--light); color: var(--ink); } }
 
 /* ---------- 5.8. Отзывы: зайчик слева стоит на месте, карточки 2 × 3 ---------- */
@@ -331,8 +484,10 @@ html:not(.js) .video__play { display: none; }
 .faq__h { margin: 0; font: inherit; }
 .faq__q { display: flex; align-items: center; justify-content: space-between; gap: calc(40 * var(--u)); width: 100%; padding: calc(24 * var(--u)) calc(12 * var(--u)); border: 0; background: none; color: var(--ink); text-align: left; }
 .faq__toggle { position: relative; flex: none; width: 56px; height: 56px; }   /* без рамки и заливки — правка владельца в макете 837:536 (2026-10-15): только знак плюс / минус */
-.faq__toggle::before, .faq__toggle::after { content: ""; position: absolute; left: 50%; top: 50%; width: 20px; height: 2px; margin: -1px 0 0 -10px; background: var(--ink); transition: opacity var(--dur-m) var(--ease-out); }
-.faq__toggle::after { transform: rotate(90deg); }
+/* знаки + и − — линии 1 px на всех ширинах (правка владельца 2026-10-20: «поправь толщину, сделай 1 px на всех брекпоинтах»; было 2);
+   вертикальная линия — своим размером, а не поворотом: повёрнутая линия 1 px встаёт на полпикселя и расплывается */
+.faq__toggle::before, .faq__toggle::after { content: ""; position: absolute; left: 50%; top: 50%; width: 20px; height: 1px; margin: -1px 0 0 -10px; background: var(--ink); transition: opacity var(--dur-m) var(--ease-out); }
+.faq__toggle::after { width: 1px; height: 20px; margin: -10px 0 0 -1px; }
 .faq__item.is-open .faq__toggle::after { opacity: 0; }
 .faq__a { display: grid; grid-template-rows: 0fr; transition: grid-template-rows var(--dur-m) var(--ease-out); }
 .faq__a-in { min-height: 0; overflow: hidden; }
@@ -344,6 +499,11 @@ html:not(.js) .faq__a { grid-template-rows: 1fr; }
 
 /* ---------- 5.11. Форма аренды в арке ---------- */
 .rent-block { position: relative; z-index: 2; padding: 0 var(--gutter) calc(134 * var(--u)); }
+/* Подвал главной — не ниже окна (правка владельца 2026-10-21: «сделать футер на всю ширину экрана, голубая полоска сверху
+   только портит»; выбор — «подвал на весь экран»): страница докручена до конца — виден один подвал, голубой нижний отступ блока
+   формы над ним не показывается. Низкое окно — подвал выше окна, как был. Строки подвала расходятся по высоте поровну. */
+body:has(.rent-block) .site-footer { display: flex; flex-direction: column; min-height: 100svh; }
+body:has(.rent-block) .site-footer__in { flex: 1 1 auto; width: 100%; align-content: space-between; }
 .rent-block .ahead { margin-inline: calc(-1 * var(--gutter)); }   /* шапка арки — во всю ширину, как сам круг */
 .rent-block__form { position: relative; z-index: 1; width: calc(800 * var(--u)); min-width: min(560px, 100%); margin: 0 auto; }
 .rent-block .form [type="submit"] { justify-self: start; width: auto; min-width: calc(290 * var(--u)); }
@@ -352,17 +512,20 @@ html:not(.js) .faq__a { grid-template-rows: 1fr; }
 @media (max-width: 1279.98px) {
   .formats { padding: 0 var(--gutter) 64px; }
   .formats .ahead { margin-inline: calc(-1 * var(--gutter)); }
-  .formats__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px 24px; height: auto; margin-top: 48px; }
+  .formats__grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 32px 24px; height: auto; margin-top: 48px; }
   .formats__grid > * { position: static; width: auto; height: auto; }
   .formats__photo { grid-column: 1 / -1; aspect-ratio: 890 / 596; }
   .formats__grid > .formats__video { position: relative; left: auto; top: auto; aspect-ratio: 864 / 496; }   /* кнопка плеера — по центру кадра, а не сетки; кадр ролика целиком */
   .formats__intro { grid-column: 1 / -1; position: relative; left: auto; top: auto; z-index: 1; margin-top: calc(-32px - .5lh + .03em); }   /* первая строка — на кадре видео, низ кадра посередине букв (как ≥1280) */
   .formats__line { display: none; }
-  .formats__body { grid-column: 1 / -1; max-width: 640px; }
+  /* правки владельца 2026-10-20 на 1279, 1024 и 1023 (arka-123-e8): абзац «Одна цена…» — на всю ширину текста блока (было 640);
+     три карточки — в один ряд, фото квадратом (было 4 : 5 во всю половину ширины — «высота карточек очень большая»),
+     заголовки карточек меньше: 28/32, на планшете 24/28, на телефоне 18/22 */
+  .formats__body { grid-column: 1 / -1; max-width: none; }
   .fcard { width: auto; gap: 12px; }
-  .fcard__photo { height: auto; aspect-ratio: 4 / 5; }
-  .fcard__title { white-space: normal; }
-  .fcard--own { grid-column: 1 / -1; width: calc(50% - 12px); }
+  .fcard__photo { height: auto; aspect-ratio: 1 / 1; }
+  .fcard__title { white-space: normal; font-size: 28px; line-height: 32px; }
+  .fcard--own { width: auto; }
   .formats__price { grid-column: 1 / -1; justify-self: center; width: auto; }
 }
 
@@ -370,18 +533,30 @@ html:not(.js) .faq__a { grid-template-rows: 1fr; }
 @media (max-width: 1023.98px) {
   .ashape__c { width: 150cqw; left: -25cqw; margin-left: 0; transform: none; }
   .ashape__r { top: 75cqw; }
-  .ahead, .ahead--rent { height: auto; padding: 128px 0 0; text-align: center; }
+  .ahead, .ahead--rent { height: auto; padding: 128px var(--gutter) 0; text-align: center; }   /* заголовок — в полях страницы (на 390 строка «датУ: мы перезвоним…» шла от края до края) */
   .ahead__mark, .ahead--rent .ahead__mark { position: static; transform: none; margin-inline: auto; }
   .ahead__mark .mark__line, .mark--down .mark__line { height: 160px; }
   .ahead__title, .ahead--rent .ahead__title { position: static; width: auto; max-width: 600px; margin: 48px auto 0; transform: none; }
-  .ahead__sub { position: static; width: auto; min-width: 0; max-width: 600px; margin: 16px auto 0; transform: none; }
+  .ahead__sub { position: static; width: auto; min-width: 0; max-width: 600px; margin: 12px auto 0; transform: none; }   /* заголовок — подзаголовок 12, подзаголовок — форма 24 (правка владельца 2026-10-20) */
 
-  .about__text { left: var(--gutter); right: var(--gutter); bottom: 48px; width: auto; max-width: 640px; }
+  /* «О нас»: фото зала целиком в рамке 16 : 9 — оба окна на экране полностью (правка владельца 2026-10-20 на 1023: «фото
+     обрезано некорректно — одно окно и тоже обрезано»; было — фото на весь экран, текст поверх); текст под фото на тёмном поле —
+     на телефоне, на 768–1023 с 2026-10-21 текст на фото (блок ниже) */
+  .about { height: auto; min-height: 0; }
+  .about__photo { position: relative; inset: auto; width: 100%; aspect-ratio: 16 / 9; max-height: 100svh; }   /* на низком окне боком — по высоте окна, во всю ширину */
+  /* низ фото растворяется в поле блока без границы — до полного цвета поля (правка владельца 2026-10-21 на 767–320: «сделай
+     плавный переход от фото, сейчас сильно грубый переход, так как видна нижняя граница фото»; было — до .9 с 60 % высоты) */
+  .about__shade { background: linear-gradient(rgb(58 46 36 / 0) 30%, rgb(58 46 36 / .25) 55%, rgb(58 46 36 / .68) 80%, #3A2E24 100%); }
+  .about__text { position: relative; left: auto; bottom: auto; width: auto; max-width: none; padding: 24px var(--gutter) 56px; }
   .video { padding: 64px var(--gutter); }
   .video__title, .reviews__title, .location__title, .faq__title { width: auto; max-width: 640px; margin-top: 48px; }
   .video__model { margin-top: 32px; }
 
-  .gallery { margin: 48px calc(-1 * var(--gutter)) 0; }
+  /* «Форматы»: от заголовка до видео 20 (правка владельца 2026-10-21 на 1023: «сделай меньше отступ в 20 px между заголовком
+     и видео»; было 48, на телефоне 40), от кнопки «Арендовать помещение» до ленты фото 64 — как между блоками («отступ должен
+     быть таким же, как другие между блоками отступы»; было 48); arka-123-74 */
+  .formats__grid { margin-top: 20px; }
+  .gallery { margin: 64px calc(-1 * var(--gutter)) 0; }
   .gallery__item--w, .gallery__item--n { height: 360px; width: auto; }
   .gallery__item--w { aspect-ratio: 890 / 596; }
   .gallery__item--n { aspect-ratio: 435 / 596; }
@@ -395,9 +570,12 @@ html:not(.js) .faq__a { grid-template-rows: 1fr; }
   .review__author { gap: 4px; }
 
   .location { padding: 64px var(--gutter) 0; }
-  .route { flex-direction: column; gap: 4px; }
-  .route__stop, .route__stop:nth-child(1), .route__stop:nth-child(3) { min-width: 0; text-align: center; white-space: normal; }
-  .route__line { display: none; }
+  /* строка «Под аркой… · Национальная библиотека · Бесплатная парковка» — одной строкой с линиями, как на компьютере (правка
+     владельца 2026-10-20 на 1023: «добавь линии между текстами, размести на одной строке»); кегль 14, как у строки фактов
+     первого экрана: при 16 на 768 строка не помещается */
+  .route { justify-content: center; gap: 0 16px; }
+  .route__stop, .route__stop:nth-child(1), .route__stop:nth-child(3) { min-width: 0; text-align: center; font-size: 14px; line-height: 20px; }
+  .route__line { flex: 0 1 calc(280 * var(--u)); min-width: 16px; }
 
   .faq { padding: 64px var(--gutter); }
   .faq__list { width: auto; margin-top: 32px; }
@@ -406,27 +584,84 @@ html:not(.js) .faq__a { grid-template-rows: 1fr; }
   .faq__item.is-open .faq__a { margin-top: -8px; }
 
   .rent-block { padding: 0 var(--gutter) 64px; }
-  .rent-block__form { width: auto; min-width: 0; max-width: 640px; margin-top: 32px; }
+  .rent-block__form { width: auto; min-width: 0; max-width: 640px; margin-top: 24px; }
+  .fcard__title { font-size: 24px; line-height: 28px; }
+}
+/* «О нас» на планшете — текст на фото, низ фото затемнён (правка владельца 2026-10-21 на 1023–768: «некрасиво и
+   непрофессионально расположен текст, затемни снизу фото и наложи текст на фото + уменьши размер текста»; было — 32/40 под
+   фото на тёмном поле; ведёт arka-123-31). Кегль 28/32 (шкала не растёт к узким: телефон — 24/28), до 640 в ширину — три
+   строки, нижняя треть фото; телефон — текст под фото */
+@media (min-width: 768px) and (max-width: 1023.98px) {
+  .about__shade { background: linear-gradient(rgb(24 18 12 / 0) 35%, rgb(24 18 12 / .6) 65%, rgb(24 18 12 / .88) 100%); }
+  .about__text { position: absolute; left: var(--gutter); bottom: 40px; width: min(640px, calc(100% - 2 * var(--gutter))); padding: 0; font-size: 28px; line-height: 32px; text-indent: 48px; }
 }
 @media (max-width: 767.98px) {
   .ahead, .ahead--rent { padding-top: 112px; }
   .ahead__mark .mark__line, .mark--down .mark__line { height: 120px; }
   .ahead__title, .ahead--rent .ahead__title { margin-top: 40px; }
-  .about__text { bottom: 32px; }
-  .formats__grid { grid-template-columns: 1fr; gap: 24px; margin-top: 40px; }
+  .about__text { padding: 16px var(--gutter) 40px; font-size: 24px; line-height: 28px; text-indent: 40px; }   /* кегль 24/28 (правка владельца 2026-10-21 на 767–320: «уменьши размер текста»; было 28/32, планшет — 28/32) */
+  .formats__grid { gap: 24px 12px; }
   .formats__intro { margin-top: calc(-24px - .5lh + .03em); }   /* промежуток сетки здесь 24 */
-  .fcard--own { width: auto; }
+  .fcard { gap: 8px; }
+  .fcard__photo { aspect-ratio: 3 / 4; }
+  .fcard__title { font-size: 18px; line-height: 22px; }
   .formats__price .btn { width: 100%; }
+  /* Лента фото — как на планшете: кадры в своих пропорциях, высота 360, на узком окне — чтобы широкий кадр стоял в полях целиком;
+     стрелки и полоса хода, без «Листайте» и затухания справа (правка владельца 2026-10-21 на 767–320: «уменьши высоту фото
+     в слайдере, они здоровые», «убери справа блюр», «убери текст „Листайте“ + верни стрелки и пагинацию»; было — 85 % ширины
+     и 4 : 5, на 767 кадр 652 × 815). Лента «Отзывов» — так же: стрелки и полоса вместо «Листайте» (тот же род, L181); arka-123-74 */
   .gallery__track { gap: 12px; }
-  .gallery__item--w, .gallery__item--n { width: 85vw; height: auto; aspect-ratio: 4 / 5; }
-  .gallery__pager { display: none; }
-  .gallery__hint { display: block; margin-top: 12px; text-align: center; color: var(--soft); }
-  .gallery::after { content: ""; position: absolute; top: 0; right: 0; width: 48px; height: calc(100% - 30px); background: linear-gradient(90deg, rgb(225 227 233 / 0), var(--page)); pointer-events: none; }
-  .reviews__bunny { width: 160px; margin-bottom: -64px; }
+  .gallery__item--w, .gallery__item--n { height: min(360px, calc((100cqw - 2 * var(--gutter)) * 596 / 890)); }
+  .reviews .reviews__pager { display: flex; }
+  .reviews__bunny { display: none; }   /* на телефоне зайчика нет (правка владельца 2026-10-21 на 767–320: «скрой маскота»; было 160 px над лентой; arka-123-e5) */
   .reviews__grid { display: flex; gap: 12px; margin: 0 calc(-1 * var(--gutter)); padding: 0 var(--gutter); overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: var(--gutter); scrollbar-width: none; }
   .reviews__grid::-webkit-scrollbar { display: none; }
   .review { flex: none; width: 85%; scroll-snap-align: start; }
-  .reviews__hint { display: block; }
   .faq__toggle { width: 48px; height: 48px; }
   .rent-block .form [type="submit"] { width: 100%; }
+  /* строки «Под аркой… · Национальная библиотека · Бесплатная парковка» на телефоне нет (правка владельца 2026-10-21 на 767:
+     «скрой данный текст»; было — столбиком с линиями); заголовок «Лофт в пяти минутах…» — на её месте, в 64 от ленты «Отзывов»,
+     как строка до этого; arka-123-e5 */
+  .route { display: none; }
+  .location__title { margin-top: 0; }
 }
+/* 320–390: карточки «Зал под ваш формат» — одна под другой, фото 4 : 3 во всю ширину, как фото слайдов «Окна» на телефоне
+   (правка владельца 2026-10-21 на 390–320: «сделай карточки одна под одной»; было три в ряд, фото 3 : 4 шириной ≈ 100 px);
+   между карточками 24 — втрое больше, чем от фото до подписи (8, L92); arka-123-74 */
+@media (max-width: 390.98px) {
+  .formats__grid { grid-template-columns: minmax(0, 1fr); }
+  .fcard__photo { aspect-ratio: 4 / 3; }
+}
+
+/* ---------- Правки адаптива 2026-10-20 (сессия arka-123-e8; окно владельца ≈ 1280 × 533 и 1023 × 535 при 125 %) ---------- */
+/* 1024–1279: вопросы — на всю ширину текста блока (правка владельца на 1024: «переверстать вопросы/ответы в аккордеоне на всю
+   ширину текстового контента»; было 1194 макета — 637 px на 1024) */
+@media (min-width: 1024px) and (max-width: 1279.98px) {
+  .faq__list { width: auto; }
+  .faq__a p { width: auto; }
+}
+/* 768–1023: «Отзывы» — зайчик слева, карточки справа лентой вбок со стрелками (правка владельца на 1023: «размести маскота слева,
+   а карточки справа + карточки реализуй в виде слайдера»); ленту ведёт glide.js, как на телефоне. Две карточки в ряд, на узком
+   планшете — полторы (видно, что лента листается) */
+@media (min-width: 768px) and (max-width: 1023.98px) {
+  /* Зайчик — ровно по высоте карточек: от кончиков ушей до подошв — от верха до низа ленты (правка владельца 2026-10-21 на
+     1023–768: «маскот по размеру маленький», на 768: «сделай маскота по высоте с карточкой отзыва»; было 200 px — 248 при
+     карточке 374; arka-123-e5). Картинка — по высоте строки ленты: в файле 972 × 1327 фигура занимает 222…790 × 71…1275
+     (подошвы), поэтому картинка выше строки на 1327 / 1204 и поднята на 71 / 1204; левый край фигуры — по полю страницы.
+     Колонка 176 — ширина фигуры при карточке 374 (768) */
+  .reviews__body { grid-template-columns: 176px minmax(0, 1fr); grid-template-areas: "bunny grid" ". pager"; column-gap: 24px; row-gap: 24px; align-items: end; }
+  .reviews__bunny { grid-area: bunny; position: relative; top: 0; width: auto; justify-self: stretch; align-self: stretch; margin: 0; }
+  .reviews__bunny img { position: absolute; left: 0; top: -5.897%; width: auto; height: 110.216%; max-width: none; max-height: none; transform: translateX(-22.84%); }
+  .reviews__grid { grid-area: grid; display: flex; gap: 16px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scrollbar-width: none; }
+  .reviews__grid::-webkit-scrollbar { display: none; }
+  .review { flex: 0 0 max(calc(50% - 8px), min(100%, 320px)); scroll-snap-align: start; }
+  .reviews .reviews__pager { grid-area: pager; display: flex; }
+}
+.reviews__pager { display: none; align-items: center; justify-content: center; gap: 24px; }
+.reviews__pager .pager__arrow { position: relative; display: grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 0; background: none; color: var(--ink); transition: opacity var(--dur-s) var(--ease-out); }
+.reviews__pager .pager__arrow::before { content: ""; position: absolute; inset: -12px; }
+.reviews__pager .pager__arrow svg { width: 100%; height: 100%; }
+.reviews__pager .pager__arrow[aria-disabled="true"] { opacity: .3; cursor: default; }
+.reviews__pager .pager__track { position: relative; width: 160px; height: 1px; background: var(--line); overflow: hidden; }
+.reviews__pager .pager__current { position: absolute; left: 0; top: 0; width: 33.334%; height: 100%; background: var(--ink); will-change: transform; }
+html:not(.js) .reviews__pager { display: none; }

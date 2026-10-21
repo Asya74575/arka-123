@@ -114,3 +114,23 @@
     if (location.hash) history.replaceState(null, '', location.pathname + location.search);
   });
 })();
+
+// Запертая страница не меняет ширину (правки владельца 2026-10-20: «при нажатии на кнопку контент карточки подпрыгивает»,
+// «во второй и третьей карточках левая сторона пустая», L173). Пока открыты меню, панель аренды или просмотр фото (is-locked)
+// или стоит плавная прокрутка (lenis-stopped), у html нет полосы прокрутки — страница стала бы шире на её ширину, лента
+// слайдов и тексты сдвинулись бы, а браузер подвинул бы прокрутку. В base.css запертый html получает отступ справа --sbw —
+// ширину полосы, которую считает этот блок, пока страница не заперта: отступ включается вместе с классом, без кадра на другой
+// ширине. Содержимое прежней ширины, панели и затемнение (position: fixed) — от края до края окна. Без классической полосы
+// (телефон, macOS) --sbw = 0.
+(function () {
+  var html = document.documentElement;
+  function measure() {
+    if (html.classList.contains('is-locked') || html.classList.contains('lenis-stopped')) return;
+    var sbw = window.innerWidth - html.getBoundingClientRect().width;
+    html.style.setProperty('--sbw', (sbw > 0.5 ? Math.round(sbw * 100) / 100 : 0) + 'px');
+  }
+  measure();
+  window.addEventListener('resize', measure);
+  window.addEventListener('load', measure);
+  if (window.ResizeObserver) new ResizeObserver(measure).observe(document.body || html);   // полоса появилась, когда страница выросла
+})();

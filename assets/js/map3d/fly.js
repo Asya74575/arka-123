@@ -5,7 +5,12 @@
       на ней полёт кончается (правка владельца 2026-10-19, вечер: «уменьшить проигрывание 3д-карты… на данном моменте
       завершить»; остановки «библиотека напротив» и «весь район» сняты, закрепление 5 экранов вместо 7,2);
       у остановки замедляется, но не стоит (в каждом отрезке 0,3 ровного хода + 0,7 мягкого), слева внизу подпись остановки;
-   2) по пути от метро бегут пакеты света; путь прорисовывается за точкой-пешеходом;
+   2) путь от метро до входа в дом виден целиком с начала полёта — тёмная линия с белой каймой (правка владельца 2026-10-20:
+      «сделай путь зайца от метро до здания АРКА 123 в таком виде», скрин последней остановки; раньше путь прорисовывался
+      за зайчиком); за домами его не видно (правка владельца 2026-10-21: «дорога просвечивается сквозь стены» — бледный слой
+      пути поверх домов снят); по нему бегут пакеты света, зайчик выходит из метро и идёт по уже нарисованному пути, дома
+      закрывают его попиксельно (второй холст, см. «Зайчик за домами»); путь и ход зайчика кончаются там, где зайчик целиком
+      виден с последней остановки (см. «Путь от метро»);
    3) над аркой — столб света с плашкой «АРКА 123»;
    4) «Время в пути» стоит справа в сцене весь полёт (≥1280; уже — под сценой; правка владельца 2026-10-19, вечер: «пусть
       данная информация постоянно будет зафиксирована справа»; раньше выезжала в конце): камера ставит место остановки
@@ -50,7 +55,34 @@
   // Панель «Время в пути»: на широком экране — внутри сцены справа (весь полёт), уже — под сценой
   const placePanel = () => { const inStage = wide.matches && !reduced; (inStage ? stage : after).appendChild(panel); section.classList.toggle('is-panel-in', inStage); };
   placePanel();
-  wide.addEventListener('change', () => { placePanel(); if (window.ScrollTrigger) window.ScrollTrigger.refresh(); });
+  wide.addEventListener('change', () => { placePanel(); pinStage(); if (window.ScrollTrigger) window.ScrollTrigger.refresh(); });
+
+  // Закрепление сцены на время полёта — position: fixed, а не только sticky (правка владельца 2026-10-20: «при скролле правая
+  // часть контента дёргается/дребезжит»). При масштабе Windows 125 % пиксель прокрутки — 1,25 пикселя экрана, и сцену со sticky
+  // браузер рисует со сдвигом в доли пикселя, который меняется с каждым пикселем прокрутки (цикл 4 px): текст панели «Время
+  // в пути» и подписи остановки мерцают и прыгают на пиксель экрана, хотя getBoundingClientRect не меняется — дрожь в отрисовке.
+  // Слой с position: fixed от прокрутки не зависит и стоит попиксельно. Края закрепления по-прежнему ведёт sticky (вход и выход
+  // без скачка); fixed включается только внутри, где место у них одно: верх под шапкой, те же левый край и ширина. Переключение —
+  // в том же кадре, что прокрутка (событие Lenis), и по scroll / resize. Только мышь: на сенсорном экране прокрутку ведёт сам
+  // браузер (у краёв закрепления fixed отставал бы на кадр), а пиксель там целый — sticky не мерцает.
+  const pinOk = !reduced && !coarse;
+  let pinned = false, lenisOn = false;
+  function pinStage() {
+    if (!lenisOn && window.ARKA && window.ARKA.lenis) { lenisOn = true; window.ARKA.lenis.on('scroll', pinStage); }
+    let on = false;
+    if (pinOk && section.classList.contains('is-live')) {
+      const r = root.getBoundingClientRect(), top = parseFloat(getComputedStyle(stage).top) || 0;
+      on = r.top < top && r.bottom > top + stage.offsetHeight;
+      if (on) { section.style.setProperty('--fly-x', r.left + 'px'); section.style.setProperty('--fly-w', r.width + 'px'); }
+    }
+    if (on !== pinned) { pinned = on; section.classList.toggle('is-pinned', on); }
+  }
+  if (pinOk) {
+    addEventListener('scroll', pinStage, { passive: true });
+    addEventListener('resize', pinStage);
+    document.addEventListener('DOMContentLoaded', pinStage);   // Lenis создаёт motion.js — он подключён после fly.js
+    pinStage();
+  }
   // высота блока сменилась — закрепления и появления ниже пересчитываются
   if (window.ScrollTrigger) window.ScrollTrigger.refresh();
 
@@ -77,7 +109,7 @@
     }).catch(fail);
   }, { rootMargin: '200% 0px' }).observe(root);
   // движок не загрузился — кадр сцены картинкой и списки, как без JS
-  function fail() { section.classList.remove('is-live', 'is-panel-in'); after.appendChild(panel); if (window.ScrollTrigger) window.ScrollTrigger.refresh(); }
+  function fail() { section.classList.remove('is-live', 'is-panel-in'); after.appendChild(panel); pinStage(); if (window.ScrollTrigger) window.ScrollTrigger.refresh(); }
 
   function build() {
     const C = {
@@ -121,23 +153,28 @@
       const geos = list.filter((f) => f.length >= 6).map((f) => { const sh = new T.Shape(); for (let i = 0; i < f.length; i += 2) (i ? sh.lineTo : sh.moveTo).call(sh, f[i], -f[i + 1]); const g = new T.ShapeGeometry(sh); g.rotateX(-Math.PI / 2); g.deleteAttribute('uv'); return g; });
       return geos.length ? T.mergeGeometries(geos, false) : null;
     };
-    // лента по ломаной: прямоугольники отрезков + круглые стыки; along — расстояние от начала (для пути)
+    // лента по ломаной: круглые стыки + прямоугольники отрезков; along — расстояние от начала (для пути). Стыки — первыми, отрезки
+    // ложатся поверх: от круга стыка видна только внешняя долька на повороте. Расстояние в точках круга — проекция на направление
+    // пути в стыке, а не одно число на весь круг: пакет света проходит поворот полосой. Раньше круг стыка лежал поверх отрезков
+    // и красился пакетом целиком — на поворотах вспыхивали голубые и серые овалы шире линии (правка владельца 2026-10-21:
+    // «на маршруте есть какие-то круги»)
     function ribbon(f, w, y, out, along) {
       const hw = w / 2, seg = 10;
       const P = []; for (let i = 0; i < f.length; i += 2) P.push([f[i], f[i + 1]]);
       const acc = [0]; for (let i = 1; i < P.length; i++) acc.push(acc[i - 1] + Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]));
+      P.forEach(([px, pz], k) => {
+        const pa = P[Math.max(0, k - 1)], pb = P[Math.min(P.length - 1, k + 1)], tl = Math.hypot(pb[0] - pa[0], pb[1] - pa[1]) || 1, tx = (pb[0] - pa[0]) / tl, tz = (pb[1] - pa[1]) / tl;
+        for (let j = 0; j < seg; j++) {
+          const a1 = j / seg * Math.PI * 2, a2 = (j + 1) / seg * Math.PI * 2, c1 = Math.cos(a1) * hw, s1 = Math.sin(a1) * hw, c2 = Math.cos(a2) * hw, s2 = Math.sin(a2) * hw;
+          out.push(px, y, pz, px + c2, y, pz + s2, px + c1, y, pz + s1);
+          if (along) along.push(acc[k], acc[k] + c2 * tx + s2 * tz, acc[k] + c1 * tx + s1 * tz);
+        }
+      });
       for (let i = 0; i < P.length - 1; i++) {
         const [ax, az] = P[i], [bx, bz] = P[i + 1], dx = bx - ax, dz = bz - az, l = Math.hypot(dx, dz) || 1, nx = -dz / l * hw, nz = dx / l * hw;
         out.push(ax + nx, y, az + nz, bx + nx, y, bz + nz, bx - nx, y, bz - nz, ax + nx, y, az + nz, bx - nx, y, bz - nz, ax - nx, y, az - nz);
         if (along) { const a = acc[i], b = acc[i + 1]; along.push(a, b, b, a, b, a); }
       }
-      P.forEach(([px, pz], k) => {
-        for (let j = 0; j < seg; j++) {
-          const a1 = j / seg * Math.PI * 2, a2 = (j + 1) / seg * Math.PI * 2;
-          out.push(px, y, pz, px + Math.cos(a2) * hw, y, pz + Math.sin(a2) * hw, px + Math.cos(a1) * hw, y, pz + Math.sin(a1) * hw);
-          if (along) along.push(acc[k], acc[k], acc[k]);
-        }
-      });
     }
     const roadGeo = (list, w) => { const pos = []; list.forEach((f) => ribbon(f, w, 0, pos)); const g = new T.BufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); g.computeVertexNormals(); return g; };
     [[D.parking, C.parking, -19], [D.park, C.park, -18], [D.water, C.water, -17]].forEach(([list, color, order]) => { const g = fill(list); if (g) addFlat(g, flatMat(color, order)); });
@@ -216,13 +253,39 @@
     trees.castShadow = true; trees.receiveShadow = true; scene.add(trees);
     renderer.shadowMap.needsUpdate = true;   // сцена неподвижна — тени считаются один раз
 
-    // ---------- Путь от метро: лента с прорисовкой и бегущими пакетами света ----------
-    const RP = []; for (let i = 0; i < D.route.length; i += 2) RP.push([D.route[i], D.route[i + 1]]);
-    const RACC = [0]; for (let i = 1; i < RP.length; i++) RACC.push(RACC[i - 1] + Math.hypot(RP[i][0] - RP[i - 1][0], RP[i][1] - RP[i - 1][1]));
-    const RLEN = RACC[RACC.length - 1];
-    const routeAt = (w, out = [0, 0]) => { const s = Math.min(RLEN, Math.max(0, w * RLEN)); let i = 1; while (i < RACC.length - 1 && RACC[i] < s) i++; const t = (s - RACC[i - 1]) / ((RACC[i] - RACC[i - 1]) || 1); out[0] = RP[i - 1][0] + (RP[i][0] - RP[i - 1][0]) * t; out[1] = RP[i - 1][1] + (RP[i][1] - RP[i - 1][1]) * t; return out; };
-    const uRoute = { uDraw: { value: 0 }, uTime: { value: 0 } };
-    const routeGeo = (w, y) => { const pos = [], al = []; ribbon(D.route, w, y, pos, al); const g = new T.BufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); g.setAttribute('aAlong', new T.Float32BufferAttribute(al, 1)); return g; };
+    // ---------- Путь от метро: лента целиком (uDraw — дальше конца пути) и бегущие пакеты света ----------
+    const accOf = (P) => { const acc = [0]; for (let i = 1; i < P.length; i++) acc.push(acc[i - 1] + Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1])); return acc; };
+    const lineAt = (P, acc, s, out = [0, 0]) => { s = Math.min(acc[acc.length - 1], Math.max(0, s)); let i = 1; while (i < acc.length - 1 && acc[i] < s) i++; const t = (s - acc[i - 1]) / ((acc[i] - acc[i - 1]) || 1); out[0] = P[i - 1][0] + (P[i][0] - P[i - 1][0]) * t; out[1] = P[i - 1][1] + (P[i][1] - P[i - 1][1]) * t; return out; };
+    const RP0 = []; for (let i = 0; i < D.route.length; i += 2) RP0.push([D.route[i], D.route[i + 1]]);
+    const RACC0 = accOf(RP0), END = RP0[RP0.length - 1];   // конец пути в данных — у входа в дом зала (tools/map3d/build.mjs)
+    // последняя остановка камеры (STOPS[3]) — здесь: по ней считается, где кончаются путь и ход зайчика
+    const STOP_END = { t: [(A[0] + END[0]) / 2, 18, (A[1] + END[1]) / 2], az: -35, el: 17, d: 340, sx: 0.12, sy: 0.06, sxP: -0.18, syP: 0.06 };
+    // Путь и ход зайчика кончаются там, где зайчик целиком виден с последней остановки (правка владельца 2026-10-21: «когда
+    // маскот приходит на место, то он почему-то отходит в сторону»). Вход в дом из данных с этой остановки закрыт углом башни:
+    // зайчик доходил до угла, уходил за башню, а «привет» вставал на последнюю видимую точку пути — на 40–45 px назад, и эта
+    // точка ещё пересчитывалась с каждым сдвигом камеры. Теперь место считается один раз: от конца пути назад до первой точки,
+    // где лучи с камеры последней остановки (на любом экране: на узком и высоком камера отходит до 1,7 расстояния) к подошвам,
+    // середине и макушке зайчика и к его бокам не задевают домов. Там же кончается нарисованный путь: на какой бы ракурс
+    // ни повернули карту в конце, зайчик стоит на конце пути.
+    const RP = (() => {
+      const occ = scene.children.filter((o) => o.isMesh && o.castShadow && !o.isInstancedMesh), ray = new T.Raycaster(), q = new T.Vector3();
+      const az = T.MathUtils.degToRad(STOP_END.az), el = T.MathUtils.degToRad(STOP_END.el), rx = Math.cos(az), rz = -Math.sin(az);   // «вправо на экране» по земле
+      const cams = [1, 1.7].map((k) => [new T.Vector3(STOP_END.t[0] + STOP_END.d * k * Math.sin(az) * Math.cos(el), STOP_END.t[1] + STOP_END.d * k * Math.sin(el), STOP_END.t[2] + STOP_END.d * k * Math.cos(az) * Math.cos(el)), k]);
+      const clear = (c, x, y, z) => { q.set(x, y, z).sub(c); const l = q.length(); ray.set(c, q.divideScalar(l)); ray.far = l; return ray.intersectObjects(occ, false).length === 0; };
+      // зайчик на экране — ≈ 15 × 9 м при камере на расстоянии остановки; камера дальше — он крупнее в метрах (на экране тот же)
+      const whole = (s) => { const [x, z] = lineAt(RP0, RACC0, s); return cams.every(([c, k]) => [-4.5 * k, 0, 4.5 * k].every((dx) => [1.5, 8 * k, 15 * k].every((h) => clear(c, x + rx * dx, h, z + rz * dx)))); };
+      const len = RACC0[RACC0.length - 1];
+      let ok = len; while (ok > len - 80 && !whole(ok)) ok -= 2;
+      if (!whole(ok)) return RP0;
+      if (ok < len) { let bad = ok + 2; for (let it = 0; it < 4; it++) { const m = (ok + bad) / 2; if (whole(m)) ok = m; else bad = m; } }
+      const out = RP0.filter((_, i) => RACC0[i] < ok); out.push(lineAt(RP0, RACC0, ok));
+      return out;
+    })();
+    const RACC = accOf(RP), RLEN = RACC[RACC.length - 1];
+    const routeAt = (w, out) => lineAt(RP, RACC, w * RLEN, out);
+    // путь виден целиком с начала полёта (правка владельца 2026-10-20): прорисовка — на 20 м дальше конца, пакеты света бегут до конца
+    const uRoute = { uDraw: { value: RLEN + 20 }, uTime: { value: 0 } };
+    const routeGeo = (w, y) => { const pos = [], al = []; ribbon(RP.flat(), w, y, pos, al); const g = new T.BufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); g.setAttribute('aAlong', new T.Float32BufferAttribute(al, 1)); return g; };
     const routeMat = (color, test, opacity, packets) => {
       const m = new T.MeshBasicMaterial({ color, depthTest: test, depthWrite: false, transparent: true, opacity, side: T.DoubleSide, fog: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
       m.onBeforeCompile = (sh) => {
@@ -237,8 +300,10 @@
       };
       return m;
     };
+    // кайма и линия — с проверкой глубины: дома закрывают путь. Бледного слоя пути поверх домов больше нет (правка владельца
+    // 2026-10-21: «дорога просвечивается сквозь стены»; на стыках его прозрачность складывалась — тёмные круги по линии)
     const rCase = routeGeo(10, 0.6), rLine = routeGeo(4.5, 0.8);
-    [[rLine, C.route, false, 0.28, 9, false], [rCase, C.routeCase, true, 1, 10, false], [rLine, C.route, true, 1, 11, true]].forEach(([geo, color, test, op, order, pk]) => { const m = new T.Mesh(geo, routeMat(color, test, op, pk)); m.renderOrder = order; m.frustumCulled = false; scene.add(m); });
+    [[rCase, C.routeCase, true, 1, 10, false], [rLine, C.route, true, 1, 11, true]].forEach(([geo, color, test, op, order, pk]) => { const m = new T.Mesh(geo, routeMat(color, test, op, pk)); m.renderOrder = order; m.frustumCulled = false; scene.add(m); });
 
     // ---------- Столб света над аркой ----------
     const archTop = Math.min(...archTops.filter((h) => h < 60).concat([40]));
@@ -257,20 +322,19 @@
     // t — точка, куда смотрит камера; az — направление с этой точки на камеру (0 — с юга, −90 — с запада); el — высота взгляда;
     // d — расстояние; azN, dN — то же для узкого экрана (уже 1024 px); sx/sy — сдвиг картинки (доля кадра) вправо / вверх, чтобы место не уходило под подпись;
     // sxP, syP, dP — то же, когда справа в сцене стоит панель «Время в пути» (≥1280): место — в свободной части кадра слева
-    const W2 = routeAt(0.55);
-    const END = RP[RP.length - 1];   // конец пути — у входа в дом зала (tools/map3d/build.mjs)
+    const W2 = lineAt(RP0, RACC0, 0.55 * RACC0[RACC0.length - 1]);   // по пути из данных — кадры остановок прежние
     const STOPS = [
       { t: [-110, 0, -150], az: -30, azN: 0, el: 46, d: 1550, sx: 0.12, sy: 0.04, sxP: -0.16, syP: 0.04, dP: 1550 }, // 0 весь район (azN — узкий экран: путь сверху вниз)
       { t: [RP[0][0], 0, RP[0][1]], az: -22, el: 40, d: 520, sx: 0.14, sy: 0.06, sxP: -0.16, syP: 0.06 }, // 1 метро «Восток»
       { t: [W2[0], 0, W2[1]], az: 6, el: 42, d: 560, sx: 0.14, sy: 0.06, sxP: -0.16, syP: 0.06 }, // 2 середина пути
-      { t: [(A[0] + END[0]) / 2, 18, (A[1] + END[1]) / 2], az: -35, el: 17, d: 340, sx: 0.12, sy: 0.06, sxP: -0.18, syP: 0.06 }, // 3 у дома зала: между аркой и концом пути (правка 2026-10-15); на ней полёт кончается
+      STOP_END, // 3 у дома зала: между аркой и входом в дом (правка 2026-10-15); на ней полёт кончается
     ];
     // азимуты без скачка через 360° (свой ряд для узкого экрана)
     const unwrap = (list) => { for (let i = 1; i < list.length; i++) { while (list[i] - list[i - 1] > 180) list[i] -= 360; while (list[i] - list[i - 1] < -180) list[i] += 360; } return list; };
     const AZ_W = unwrap(STOPS.map((s) => s.az)), AZ_N = unwrap(STOPS.map((s) => (s.azN != null ? s.azN : s.az)));
     // последний отрезок кончается на SPAN хода; остаток (0,1) — камера стоит у дома, потом блок отпускается
     const LEGS = [1, 1.2, 1.2], SUM = LEGS.reduce((a, b) => a + b, 0), SPAN = 0.9;
-    const WALK_MID = 0.55;
+    const WALK_MID = 0.55, OUT_E = 0.85;
     function flight(p) {
       let q = Math.min(1, Math.max(0, p / SPAN)) * SUM, leg = 0;
       while (leg < LEGS.length - 1 && q > LEGS[leg]) { q -= LEGS[leg]; leg++; }
@@ -294,7 +358,9 @@
       let walk = leg < 1 ? 0 : 1;
       if (leg === 1) { walk = WALK_MID * e; const r = routeAt(walk); cam.tx = r[0]; cam.ty = 0; cam.tz = r[1]; }
       if (leg === 2) { walk = WALK_MID + (1 - WALK_MID) * Math.min(1, e / 0.75); const r = routeAt(walk), k = e * e * (3 - 2 * e); cam.tx = r[0] + (STOPS[3].t[0] - r[0]) * k; cam.ty = STOPS[3].t[1] * k; cam.tz = r[1] + (STOPS[3].t[2] - r[1]) * k; }
-      cam.walk = walk; cam.walkOn = leg >= 1 || e > 0.5;
+      // зайчик выходит из метро, когда камера почти долетела до остановки «Метро» (OUT_E хода отрезка 0), и сразу идёт
+      // с отрезком 1 (правка владельца 2026-10-20: раньше появлялся с половины отрезка 0 и долго ждал, пока камера летит)
+      cam.walk = walk; cam.walkOn = leg >= 1 || e > OUT_E;
       return { leg, f, e, stop: Math.min(STOPS.length - 1, leg + (e >= 0.5 ? 1 : 0)), final: p >= SPAN * 0.985 };
     }
 
@@ -307,8 +373,9 @@
     // «шагает», у входа в дом — зайчик «привет». Точка пути — под подошвами (ay — доля высоты картинки, где подошвы, из bunny.py).
     // Шагающий смотрит туда, куда идёт по экрану (поворот 0,4 с в CSS), на ходу чуть подпрыгивает; стоит — не прыгает.
     // Размер — как у предмета сцены: зайчик ростом BUNNY_M метров в проекции, но не крупнее картинки (72 макета) и не мельче 32 px —
-    // на общем плане он не в полбашни. За домом шагающий становится прозрачным, как сам путь за домами; конец пути за домом —
-    // зайчик «привет» встаёт на последнюю видимую точку пути (у угла дома), а не поверх стены.
+    // на общем плане он не в полбашни. Дома перед ним закрывают его попиксельно (второй холст, «Зайчик за домами»; правка
+    // владельца 2026-10-21 — раньше за домом он был полупрозрачным поверх стены); дойдя до конца пути, он на том же месте
+    // сменяет позу на «привет» — гаснет и проявляется без сдвига (раньше «привет» вставал на последнюю видимую точку пути).
     const BUNNY_M = 20, BUNNY_MIN = 32;
     const bunny = (pose) => `<span class="fl__hop"><img class="fl__bunny" src="img/map-bunny-${pose}-120.webp" srcset="img/map-bunny-${pose}-120.webp 1x, img/map-bunny-${pose}-240.webp 2x" width="${pose === 'walk' ? 62 : 68}" height="120" alt="" draggable="false"></span>`;
     const walkerEl = mk('fl--walker fl--bunny', bunny('walk')), endEl = mk('fl--end fl--bunny', bunny('hello'));
@@ -326,30 +393,21 @@
       const px = toScreen(x, 1, z)[1] - toScreen(x, 1 + BUNNY_M, z)[1];
       return Math.min(1, Math.max(BUNNY_MIN / h0, px / h0));
     };
-    // где стоит знак метро с плашкой (значок на точке выхода, плашка справа, слева или под ним) — по месту прошлого кадра
-    const metroBox = () => {
-      if (metroEl.classList.contains('is-off')) return null;
-      const o = labelsEl.getBoundingClientRect(), r = metroEl.getBoundingClientRect();
-      return [r.left - o.left, r.top - o.top, r.right - o.left, r.bottom - o.top];
-    };
-    // Шаг и поворот — только когда зайчик правда идёт по пути (правка владельца 2026-10-19: «при прокрутке маскот стоит
-    // на месте и топчется»): пока камера летит к метро, он ждёт у знака — место «рядом со знаком» сдвигалось за камерой
-    // на доли метра, и это считалось ходьбой (подскок), а направление пути на экране менялось с поворотом камеры (зайчик
-    // разворачивался на месте). Теперь подскок и поворот — по ходу самого пути (cam.walk), лицом туда, куда идёт.
+    // Зайчик выходит из метро (правка владельца 2026-10-20: «заяц не выходит из метро, а появляется немного дальше от точки
+    // Метро»; «маскот при скролле задерживается на месте и дёргается… в одном месте идёт пару шагов назад»). Раньше он ждал
+    // на первой точке пути, где его рамка не задевала знак с плашкой: этот сдвиг вперёд (до 160 м) пересчитывался каждый кадр
+    // по рамке знака на экране — пока камера летела, зайчик стоял впереди, дёргался шагами по 2 м и отступал назад, а когда
+    // ход догонял сдвиг, ещё ≈ 1 с стоял на месте. Теперь место — только ход по пути (cam.walk): у знака «М» он проявляется
+    // и поднимается снизу (0,8 с, CSS: .fl--walker.is-off), рисуется поверх знака, плашка встаёт по другую сторону от пути
+    // (metroLeft); при прокрутке вперёд ход только растёт.
+    // Шаг и поворот — только когда зайчик правда идёт по пути (правка владельца 2026-10-19, L166): пока камера летит, он стоит
+    // без подскока и не разворачивается; подскок и поворот — по ходу самого пути, лицом туда, куда идёт.
     let walkPrev = -1, walkMovedAt = -9, walkFace = 1, walkShown = 0, walkFaced = false;
     function walkerAt() {
-      // у выхода из метро зайчик не стоит под знаком «М»: ждёт на первой точке пути, где его рамка не задевает знак и плашку
-      const i = LB.findIndex((l) => l.el === walkerEl), [w0, h0] = sizes[i] || [37, 72], mb = metroBox();
-      let w = cam.walk, r = routeAt(w), s = bunnyScale(walkerEl, r[0], r[1]);
-      for (let m = 0; mb && m <= 160; m += 2) {
-        const ww = Math.min(1, cam.walk + m / RLEN), rr = routeAt(ww), ss = bunnyScale(walkerEl, rr[0], rr[1]), q = toScreen(rr[0], 1, rr[1]);
-        const bx = [q[0] - w0 * ss / 2, q[1] - h0 * ss * 0.9577, q[0] + w0 * ss / 2, q[1] + h0 * ss * 0.0423];
-        w = ww; r = rr; s = ss;
-        if (bx[2] < mb[0] - 4 || bx[0] > mb[2] + 4 || bx[3] < mb[1] - 4 || bx[1] > mb[3] + 4) break;
-      }
+      const w = cam.walk, r = routeAt(w), s = bunnyScale(walkerEl, r[0], r[1]);
       walkShown = w;
-      const step = walkPrev < 0 ? 0 : cam.walk - walkPrev, going = Math.abs(step) > 1e-5 && w <= cam.walk + 1e-6;   // идёт сам, а не ждёт у знака
-      walkPrev = cam.walk;
+      const step = walkPrev < 0 ? 0 : w - walkPrev, going = Math.abs(step) > 1e-5;
+      walkPrev = w;
       if (going || !walkFaced) {
         const n = routeAt(Math.min(1, w + 0.01));
         const a = toScreen(r[0], 1, r[1]), b = toScreen(n[0], 1, n[1]), dx = (b[0] - a[0]) * (step < 0 ? -1 : 1), dy = b[1] - a[1];
@@ -359,18 +417,13 @@
       const hop = !reduced && breathT - walkMovedAt < 0.15 ? -Math.abs(Math.sin(breathT * 9)) * 3 : 0;
       hopEl.style.transform = `translateY(${hop.toFixed(1)}px) scale(${s.toFixed(3)})`;
       faceEl.style.transform = `scaleX(${walkFace})`;
-      walkerEl.classList.toggle('is-behind', !seen(r[0], r[1]));
+      if (!over) walkerEl.classList.toggle('is-behind', !seen(r[0], r[1]));   // второго холста нет — прежний вид: за домом полупрозрачный
+      walkerEl.classList.toggle('is-end', w > 0.9);   // у конца пути гаснет на месте, не уходя вниз (CSS)
       return [r[0], 1, r[1]];
     }
-    // конец пути: последняя видимая точка в последних 40 м пути; не видно ни одной — зайчика нет (endW < 0)
-    let endW = 1, endKey = '';
+    // конец пути — там же, где кончился ход шагающего (routeAt(1)): «привет» проявляется на его месте
     function endAt() {
-      const key = camera.position.toArray().map((v) => Math.round(v / 2)).join();
-      if (key !== endKey) {
-        endKey = key; endW = -1;
-        for (let s = 0; s <= 40; s += 1) { const w = 1 - s / RLEN, r = routeAt(w); if (seen(r[0], r[1])) { endW = w; break; } }
-      }
-      const r = routeAt(Math.max(0, endW));
+      const r = routeAt(1);
       endHopEl.style.transform = `scale(${bunnyScale(endEl, r[0], r[1]).toFixed(3)})`;
       return [r[0], 1, r[1]];
     }
@@ -378,17 +431,26 @@
     // 2026-10-18: «замени на более привычный значок»). Круг — знак метрополитена, как значки мессенджеров (L54), не скругление L22
     const METRO = '<svg class="fl__m" viewBox="-16 -16 32 32" width="32" height="32" role="img" aria-label="Метро"><circle r="15" fill="#fff" stroke="#E31E25" stroke-width="2"/><path d="M-11.2-4.5H-3L0-1.4 2.9-4.5H11.2V4.5H3.1L0 7.7-3.2 4.5H-11.2Z" fill="#E31E25"/></svg>';
     const metroEl = mk('fl--metro', METRO + '<span class="fl__plate">Метро «Восток»</span>');
+    // плашка «Метро «Восток»» — по другую сторону знака от пути (правка владельца 2026-10-20: зайчик выходит из метро и идёт
+    // по пути, плашка его не закрывает): если первые 30 м пути в кадре остановки «Метро» уходят вправо — плашка слева, влево —
+    // справа. Сторона считается один раз по азимуту камеры этой остановки (вправо на экране — вектор (cos az, −sin az)
+    // на земле), а не каждый кадр: пока камера поворачивается, плашка не перескакивает; другая сторона — только у края кадра
+    // или когда сторона занята подписью остановки
+    const metroLeft = (() => { const az = T.MathUtils.degToRad(AZ_W[1]), q = routeAt(30 / RLEN); return (q[0] - RP[0][0]) * Math.cos(az) - (q[1] - RP[0][1]) * Math.sin(az) > 0; })();
+    let metroAtL = metroLeft;   // где плашка сейчас (слева от знака)
     const LB = [
       { el: mk('fl--pin', '<span class="fl__plate">АРКА 123</span>'), at: () => [A[0], beamTop, A[1]], ax: 0.5, ay: 1, dy: -10, pr: 0, clamp: true, pin: true },
-      { el: walkerEl, at: walkerAt, ax: 0.5, ay: 0.9577, pr: 1, free: true, when: () => cam.walkOn && cam.walk < 0.995 },
-      { el: endEl, at: endAt, ax: 0.5, ay: 0.9641, pr: 1, free: true, when: () => cam.walk >= 0.995 && endW >= 0 },
+      { el: walkerEl, at: walkerAt, ax: 0.5, ay: 0.9577, pr: 1, free: true, bunny: true, when: () => cam.walkOn && cam.walk < 0.9999 },
+      { el: endEl, at: endAt, ax: 0.5, ay: 0.9641, pr: 1, free: true, bunny: true, when: () => cam.walk >= 0.9999 },
       { el: metroEl, at: () => [RP[0][0], 0, RP[0][1]], ax: 0, ay: 0, ox: -16, oy: -16, pr: 2, flip: true },
       { el: mk('fl--place', '<span class="fl__plate">Национальная библиотека</span>'), at: () => [lc[0], libTop, lc[1]], ax: 0.5, ay: 1, dy: -24, pr: 3, clamp: true },
       { el: mk('fl--place', '<span class="fl__plate">ТРЦ Dana Mall</span>'), at: () => [D.mall.c[0], D.mall.h, D.mall.c[1]], ax: 0.5, ay: 0.5, pr: 4, clamp: true, skip: !D.mall },
       { el: mk('fl--park', '<span class="fl__plate">Парк Писателей</span>'), at: () => [lc[0] + 20, 0, lc[1] + 118], ax: 0.5, ay: 0.5, pr: 5, clamp: true },
     ].filter((l) => !l.skip);
     let sizes = [];
-    const measure = () => { sizes = LB.map((l) => [l.el.offsetWidth, l.el.offsetHeight]); };
+    // знак метро с плашкой меряется в строку (знак 32 + промежуток 8 + плашка), какой бы вид у него ни был в момент замера:
+    // замер в виде «плашка под знаком» давал ширину одной плашки, сторона выбиралась неверно и знак уезжал с выхода из метро
+    const measure = () => { sizes = LB.map((l) => { if (!l.flip) return [l.el.offsetWidth, l.el.offsetHeight]; const pl = l.el.querySelector('.fl__plate'); return [32 + 8 + pl.offsetWidth, Math.max(32, pl.offsetHeight)]; }); };
     const keepOut = []; // прямоугольники, куда подписи не ставим (подпись остановки, панель)
     const rectIn = (el) => { const s = stage.getBoundingClientRect(), r = el.getBoundingClientRect(); return [r.left - s.left, r.top - s.top, r.right - s.left, r.bottom - s.top]; };
     // подпись остановки — по раскладке, без сдвига анимации появления (иначе место мерится на 16 px ниже)
@@ -400,7 +462,8 @@
       const taken = [...keepOut], RW = panelIn() && panelX > 0 ? panelX : stageW;
       LB.forEach((l, i) => {
         const [w, h] = sizes[i];
-        let p = toScreen(...l.at());
+        l.pt = l.at();   // точка сцены подписи — для второго холста (зайчик за домами)
+        let p = toScreen(...l.pt);
         let x = p[0] - w * l.ax + (l.ox || 0), y = p[1] - h * l.ay + (l.dy || 0) + (l.oy || 0);
         // узкий экран: метро стоит прямо над аркой — плашка «АРКА 123» справа от точки под аркой, а не над столбом
         if (l.pin && narrow()) { p = toScreen(A[0], 0, A[1]); x = p[0] + 22; y = p[1] - h / 2; if (x + w > RW - 20) x = p[0] - 22 - w; }
@@ -416,11 +479,23 @@
             p = toScreen(A[0], lo, A[1]); x = p[0] - w / 2; y = p[1] - h - 10;
           }
         }
-        // метро у правого края: плашка слева от значка «М» (иначе подпись не помещается и пропадает)
+        // метро: плашка по другую сторону знака от пути (metroLeft, правка владельца 2026-10-20); там не помещается у края
+        // или занято подписью остановки — с другой стороны (у правого края — слева от значка «М», иначе подпись пропадает)
+        // Сторона держится, пока помещается: на свою сторону плашка возвращается, только когда там есть запас 24 px, — иначе
+        // на телефоне, где знак ходит у середины кадра, плашка перескакивала бы туда-обратно на каждом пороге
         let flip = false, stack = false, bw = w, bh = h;
-        if (l.flip && x + w > RW - 20) { flip = true; x = p[0] + 16 - w; }
-        // телефон 320–389: плашка метро не помещается ни справа, ни слева от «М» — «М» на точке, плашка под ним по центру
-        if (l.flip && flip && x < 24) { flip = false; stack = true; bw = w - 40; bh = h + 40; x = Math.min(RW - 24 - bw, Math.max(24, p[0] - bw / 2)); y = p[1] - 16; }
+        if (l.flip) {
+          const xl = p[0] + 16 - w, xr = x, pref = metroLeft ? xl : xr, cur = metroAtL ? xl : xr;
+          const fits = (bx, m = 0) => bx >= 24 + m && bx + w <= RW - 20 - m;
+          const free = (bx) => !taken.some((o) => bx - 6 < o[2] && bx + w + 6 > o[0] && y - 6 < o[3] && y + h + 6 > o[1]);
+          const pick = fits(pref, 24) && free(pref) ? pref : fits(cur) && free(cur) ? cur : [xl, xr].find((bx) => fits(bx) && free(bx)) ?? [cur, xl, xr].find((bx) => fits(bx));
+          // телефон 320–389: плашка метро не помещается ни справа, ни слева от «М» — «М» на точке, плашка под ним по центру
+          if (pick == null) { stack = true; bw = w - 40; bh = h + 40; x = Math.min(RW - 24 - bw, Math.max(24, p[0] - bw / 2)); y = p[1] - 16; }
+          else { x = pick; flip = pick === xl; metroAtL = flip; }
+          // плашка под знаком прижата к краю кадра — знак «М» всё равно стоит на выходе из метро, откуда выходит зайчик
+          const mdx = stack ? (p[0] - (x + bw / 2)).toFixed(1) + 'px' : '0px';
+          if (mdx !== l.mdx) { l.mdx = mdx; l.el.style.setProperty('--m-dx', mdx); }
+        }
         // подпись у края узкого экрана сдвигается в кадр (если сама точка в кадре), а не пропадает
         if (l.clamp && p[0] > 8 && p[0] < RW - 8) x = Math.min(RW - 24 - w, Math.max(24, x));
         const box = [x - 6, y - 6, x + bw + 6, y + bh + 6];
@@ -431,6 +506,82 @@
         l.el.classList.toggle('is-off', !ok);
         if (l.flip) { l.el.classList.toggle('is-flip', flip); l.el.classList.toggle('is-stack', stack); }
       });
+    }
+
+    // ---------- Зайчик за домами: второй холст поверх зайчика дорисовывает дома, которые стоят перед ним ----------
+    // Правка владельца 2026-10-21: «при прокрутке карты маскот просматривается сквозь стены». Зайчик — картинка поверх холста
+    // карты (так он стоит поверх знака метро и плашек, L177), и дом закрыть его не мог: за домом он был полупрозрачным, у угла
+    // дома стоял поверх стены. Теперь поверх него лежит второй прозрачный холст с той же камерой: в рамке зайчика он рисует
+    // только дома, рёбра, библиотеку и деревья — и только их части ближе к камере, чем сам зайчик (плоскость отсечения:
+    // вертикальная, через подошвы, повёрнута к камере, на 3 м ближе к ней — стена у него за спиной или сбоку фигуру не срезает),
+    // попиксельно, теми же цветами, светом, тенями и дымкой, а поверх — ту же мягкую подложку, что у подписи остановки
+    // (.fly__view::after; здесь её повторяет шейдер). Вне рамки зайчика холст прозрачный.
+    // Плоскость отсечения, а не плоскость глубины в буфере: с ней (Windows, ANGLE D3D11) первый кадр с зайчиком стоял 1,3–1,6 с
+    // в видеокарте — страница замирала ровно в момент выхода зайчика из метро.
+    // Второго WebGL нет — прежний вид: за домом зайчик полупрозрачный.
+    const overEl = document.createElement('canvas');
+    overEl.className = 'fly__over'; overEl.setAttribute('aria-hidden', 'true'); labelsEl.appendChild(overEl);   // после зайчиков — поверх них
+    let over = null, occlude = () => {};
+    try { over = new T.WebGLRenderer({ canvas: overEl, antialias: true, alpha: true, powerPreference: 'high-performance' }); } catch (e) { overEl.remove(); }
+    if (over) {
+      const OCC = 1;   // слой сцены второго холста: дома, рёбра, библиотека, деревья и свет; подложка — только в нём
+      over.outputColorSpace = renderer.outputColorSpace; over.toneMapping = renderer.toneMapping;
+      over.shadowMap.enabled = true; over.shadowMap.autoUpdate = false; over.shadowMap.needsUpdate = true;
+      over.setClearColor(0x000000, 0);
+      // плоскость отсечения — у материалов домов; основной холст её не видит (localClippingEnabled только у второго)
+      const clip = new T.Plane(new T.Vector3(0, 1, 0), 1e6);
+      over.localClippingEnabled = true;
+      scene.children.forEach((o) => { if (o.isLight || o.isLineSegments || (o.isMesh && o.castShadow)) { o.layers.enable(OCC); if (o.material) o.material.clippingPlanes = [clip]; } });
+      // подложка .fly__view::after (map.css): #e1e3e9 с той же прозрачностью по ширине и высоте кадра (уже 1024 — снизу вверх, без
+      // маски); ложится только на нарисованное: цвет × прозрачность холста, прозрачность холста прежняя (смешение 5 — Custom;
+      // 206 — DstAlpha, 205 — OneMinusSrcAlpha, 200 — Zero, 201 — One)
+      const uWash = { uSize: { value: new T.Vector2(1, 1) }, uMode: { value: 1 } };
+      const washMat = new T.MeshBasicMaterial({ transparent: true, depthTest: false, depthWrite: false, toneMapped: false, fog: false, blending: 5, blendSrc: 206, blendDst: 205, blendSrcAlpha: 200, blendDstAlpha: 201 });
+      washMat.onBeforeCompile = (sh) => {
+        Object.assign(sh.uniforms, uWash);
+        sh.vertexShader = sh.vertexShader.replace('#include <project_vertex>', '#include <project_vertex>\ngl_Position = vec4(position.xy, 0.0, 1.0);');
+        sh.fragmentShader = 'uniform vec2 uSize;\nuniform float uMode;\n' + sh.fragmentShader.replace('#include <dithering_fragment>', `#include <dithering_fragment>
+          vec2 f = gl_FragCoord.xy / uSize;   // y — от низа, как у градиента 0deg
+          float ax = f.x < 0.24 ? mix(0.94, 0.7, f.x / 0.24) : mix(0.7, 0.0, clamp((f.x - 0.24) / 0.2, 0.0, 1.0));
+          float ay = f.y < 0.3 ? mix(0.96, 0.8, f.y / 0.3) : mix(0.8, 0.0, clamp((f.y - 0.3) / 0.22, 0.0, 1.0));
+          float a = uMode > 1.5 ? ay : uMode > 0.5 ? ax * (1.0 - clamp((f.y - 0.34) / 0.28, 0.0, 1.0)) : 0.0;
+          gl_FragColor = vec4(vec3(225.0, 227.0, 233.0) / 255.0 * a, a);`);
+      };
+      const wash = new T.Mesh(new T.PlaneGeometry(2, 2), washMat);
+      wash.renderOrder = 1e6; wash.frustumCulled = false; wash.layers.set(OCC); scene.add(wash);
+      const bunnies = LB.filter((l) => l.bunny);
+      let drawn = false;
+      const draw = () => { const bg = scene.background; scene.background = null; camera.layers.set(OCC); over.render(scene, camera); camera.layers.set(0); scene.background = bg; };
+      occlude = () => {
+        // рамка видимых зайчиков в кадре сцены (на смене позы — и гаснущего), с запасом 2 px
+        const s = view.getBoundingClientRect();
+        let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9, at = null;
+        bunnies.forEach((l) => {
+          if (!l.pt || (l.el.classList.contains('is-off') && !(+getComputedStyle(l.el).opacity > 0.01))) return;
+          const r = l.el.querySelector('img').getBoundingClientRect();
+          x0 = Math.min(x0, r.left - s.left); y0 = Math.min(y0, r.top - s.top); x1 = Math.max(x1, r.right - s.left); y1 = Math.max(y1, r.bottom - s.top);
+          at = l.pt;
+        });
+        x0 = Math.max(0, Math.floor(x0 - 2)); y0 = Math.max(0, Math.floor(y0 - 2)); x1 = Math.min(stageW, Math.ceil(x1 + 2)); y1 = Math.min(stageH, Math.ceil(y1 + 2));
+        if (!at || x1 <= x0 || y1 <= y0) { if (drawn) { over.setScissorTest(false); over.clear(); drawn = false; } return; }
+        // плоскость: через подошвы, повёрнута к камере вокруг вертикали, на 3 м ближе к ней; рисуется то, что по сторону камеры
+        const c = camera.position, nl = Math.hypot(c.x - at[0], c.z - at[2]) || 1, ux = (c.x - at[0]) / nl, uz = (c.z - at[2]) / nl;
+        clip.normal.set(ux, 0, uz); clip.constant = -(ux * (at[0] + ux * 3) + uz * (at[2] + uz * 3));
+        uWash.uMode.value = reduced ? 0 : narrow() ? 2 : 1;
+        over.setScissorTest(true); over.setScissor(x0, stageH - y1, x1 - x0, y1 - y0);
+        draw(); drawn = true;
+      };
+      over.fit = () => { over.setPixelRatio(renderer.getPixelRatio()); over.setSize(stageW, stageH, false); over.getDrawingBufferSize(uWash.uSize.value); };
+      // Шейдеры и карту теней второго холста готовим заранее — сцена собирается за два экрана до блока, — а не в первом кадре
+      // с зайчиком: шейдеры — параллельно, не останавливая страницу (compileAsync), затем пробный кадр в 1 px со всеми предметами
+      const warm = () => {
+        if (drawn) return;
+        const cull = []; scene.traverse((o) => { if (o.frustumCulled) { o.frustumCulled = false; cull.push(o); } });
+        clip.normal.set(0, 1, 0); clip.constant = 1e6;   // ничего не отсекать
+        over.setScissorTest(true); over.setScissor(0, 0, 1, 1); draw();
+        cull.forEach((o) => { o.frustumCulled = true; }); over.setScissorTest(false); over.clear();
+      };
+      (over.compileAsync ? over.compileAsync(scene, camera) : Promise.resolve()).catch(() => {}).then(() => requestAnimationFrame(warm));
     }
 
     // ---------- Камера и кадр ----------
@@ -495,6 +646,7 @@
       stageW = view.clientWidth || 1; stageH = view.clientHeight || 1;
       renderer.setPixelRatio(Math.min(coarse ? 1.5 : 2, window.devicePixelRatio || 1));
       renderer.setSize(stageW, stageH, false);
+      if (over) over.fit();
       measure();
       keepOut.length = 0; const s = steps[active]; if (s) keepOut.push(stepRect(s)); if (panelIn()) keepOut.push(rectIn(panel));
       panelX = panelIn() ? panel.offsetLeft : 0;
@@ -512,11 +664,11 @@
       setFinal(st.final);
       setStep(reduced ? STOPS.length - 1 : st.stop);
       orbit.az = damp(orbit.az, orbit.taz, 5, dt); orbit.el = damp(orbit.el, orbit.tel, 5, dt);
-      uRoute.uDraw.value = (cam.walkOn && cam.walk < 0.995 ? Math.max(cam.walk, walkShown) : cam.walk) * RLEN + (cam.walk >= 0.995 ? 20 : 0);   // путь — до зайчика (у метро он ждёт в стороне от знака)
       uRoute.uTime.value = reduced ? 0 : breathT;
       applyCamera();
       renderer.render(scene, camera);
       placeLabels();
+      occlude();
     }
     const loop = (now) => { if (!running) return; frame(now); requestAnimationFrame(loop); };
     fit();
@@ -526,6 +678,14 @@
       new IntersectionObserver((es) => { const on = es.some((e) => e.isIntersecting); if (on && !running) { running = true; last = performance.now(); requestAnimationFrame(loop); } else if (!on) running = false; }, { rootMargin: '50% 0px' }).observe(root);
       frame(); section.classList.add('is-ready');
     });
-    window.__flyView = { STOPS, camAt, labels: () => LB.map((l, i) => ({ t: l.el.textContent.trim(), p: toScreen(...l.at()).map((v) => Math.round(v * 100) / 100), size: sizes[i], off: l.el.classList.contains('is-off') })), stage: () => [stageW, stageH], info: () => ({ trees: treesAt.length, routeLen: RLEN, archTop, active, isFinal, shown, scaleY: [...new Set(scene.children.map((o) => o.scale.y))] }) };
+    window.__flyView = { STOPS, camAt, labels: () => LB.map((l, i) => ({ t: l.el.textContent.trim(), p: toScreen(...l.at()).map((v) => Math.round(v * 100) / 100), size: sizes[i], off: l.el.classList.contains('is-off') })), stage: () => [stageW, stageH], info: () => ({ trees: treesAt.length, routeLen: RLEN, archTop, active, isFinal, shown, scaleY: [...new Set(scene.children.map((o) => o.scale.y))] }),
+      // для проверок (tools/checks/pravki-2026-10-20-map.mjs): ход зайчика по пути, его подошвы и знак метро на экране, прорисовка пути
+      walker: () => { const q = routeAt(walkShown), f = toScreen(q[0], 1, q[1]), m = toScreen(RP[0][0], 0, RP[0][1]); return { w: walkShown, walk: cam.walk, feet: [f[0], f[1]], metro: [m[0], m[1]], on: !walkerEl.classList.contains('is-off'), uDraw: uRoute.uDraw.value, vis: seen(q[0], q[1]) }; },
+      route: (n) => Array.from({ length: n + 1 }, (_, k) => { const q = routeAt(k / n), s = toScreen(q[0], 0.7, q[1]); return [s[0], s[1], s[2], seen(q[0], q[1]) ? 1 : 0]; }),   // 4-е — точка не за домом
+      setDraw: (v) => { uRoute.uDraw.value = v == null ? RLEN + 20 : v; },   // проверка прячет путь, чтобы найти его пиксели на кадре
+      // для проверки tools/checks/pravki-2026-10-21-08.mjs: длина пути до конца хода и в данных; работает ли второй холст
+      end: () => ({ len: RLEN, full: RACC0[RACC0.length - 1], over: !!over }),
+      // круг стыка ленты на повороте 90°: разброс расстояния вдоль пути по его точкам (одно число — пакет красит круг целиком)
+      joint: () => { const pos = [], al = []; ribbon([0, 0, 10, 0, 10, 10], 4, 0, pos, al); const k = al.slice(30, 60); return Math.max(...k) - Math.min(...k); } };
   }
 })();

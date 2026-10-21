@@ -19,6 +19,11 @@
       if (r.top <= mid && r.bottom > mid && r.height > 0) tone = blocks[i].getAttribute('data-bg');
     }
     hdr.classList.toggle('is-light-ui', tone === 'dark');
+    // Подвал дошёл до шапки (невысокое окно, подвал выше окна) — шапка уходит вверх: у подвала свои логотип, разделы и контакты,
+    // а шапка поверх них путала (правка владельца 2026-10-20 на 1024: «логотипы почти накладываются, элементы хедера очень
+    // близко к элементам футера»; arka-123-e8). На высоком окне подвал до шапки не доходит — шапка стоит, как раньше.
+    var foot = document.getElementById('site-footer');
+    hdr.classList.toggle('is-off', !!foot && foot.getBoundingClientRect().top < mid * 2 && !document.documentElement.classList.contains('is-locked'));
   }
   function request() { if (!queued) { queued = true; requestAnimationFrame(update); } }
   window.addEventListener('scroll', request, { passive: true });

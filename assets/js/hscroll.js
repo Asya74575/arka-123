@@ -34,13 +34,16 @@
     pending = pending.filter(function (el) {
       var r = el.getBoundingClientRect();
       if (!r.width && !r.height) return true;
-      if (r.top < H * .85 && r.bottom > 0 && r.left < W * .92 && r.right > 0) { ARKA.reveal.play(el, n * .1); n++; return false; }
+      // вошёл в окно: верх выше 85 % высоты окна или элемент виден целиком (на невысоком окне заголовок слайда стоит ниже
+      // 85 % — и раньше не появлялся никогда: «в карточках пропали заголовки», правка владельца 2026-10-20)
+      if ((r.top < H * .85 || r.bottom <= H) && r.bottom > 0 && r.left < W * .92 && r.right > 0) { ARKA.reveal.play(el, n * .1); n++; return false; }
       return true;
     });
   }
   ARKA.windowsCheck = check;
   window.addEventListener('scroll', check, { passive: true });
   window.addEventListener('resize', check);
+  track.addEventListener('scroll', check, { passive: true });   // уже 1024 лента листается вбок сама
   if (ARKA.lenis) ARKA.lenis.on('scroll', check);
   // Буквы и строки считаются после загрузки шрифтов (как в motion.js)
   (ARKA.ready || Promise.resolve()).then(function () { ready = true; check(); });
@@ -107,4 +110,46 @@
       slides.forEach(function (s) { gsap.set(s.querySelectorAll('.slide__photo img'), { clearProps: 'transform' }); });
     };
   });
+})();
+
+// ---------- Уже 1024: слайды «Окна» — лента вбок (правка владельца 2026-10-20 на 1023: «реализовать слайдер», arka-123-e8) ----------
+// Ход ленты — glide.js (как «Фото»: мышь и палец с мягким следованием, доводка на слайд 0,8–1 с; при «уменьшении движения» —
+// сразу на месте); стрелки — к соседнему слайду, тёмный отрезок полосы идёт за лентой. На компьютере ряд не прокручивается
+// (лента — закреплённый экран, см. выше), стрелки там ведёт код выше.
+(function () {
+  var pin = document.querySelector('[data-hscroll]');
+  if (!pin || !window.matchMedia) return;
+  var ARKA = window.ARKA || {};
+  var track = pin.querySelector('.windows__track');
+  var current = pin.querySelector('.pager__current');
+  var prev = pin.querySelector('[data-dir="-1"]');
+  var next = pin.querySelector('[data-dir="1"]');
+  var mq = window.matchMedia('(max-width: 1023.98px)');
+  var g = null;
+  function on() { return mq.matches; }
+  function sync() {
+    if (!on()) return;
+    var max = Math.max(1, track.scrollWidth - track.clientWidth);
+    var p = Math.min(1, Math.max(0, track.scrollLeft / max));
+    if (current) current.style.transform = 'translateX(' + (p * 200) + '%)';
+    if (prev) prev.setAttribute('aria-disabled', String(track.scrollLeft < 4));
+    if (next) next.setAttribute('aria-disabled', String(track.scrollLeft > max - 4));
+  }
+  function onClick(event) {
+    if (!on()) return;
+    var d = Number(event.currentTarget.getAttribute('data-dir'));
+    if (event.currentTarget.getAttribute('aria-disabled') === 'true') return;
+    if (g) g.step(d); else track.scrollBy({ left: d * track.clientWidth, behavior: 'smooth' });
+  }
+  function setup() {
+    if (on()) { if (!g && ARKA.glide) g = ARKA.glide(track); sync(); }
+    else { track.scrollLeft = 0; if (current) current.style.transform = ''; }
+  }
+  track.addEventListener('scroll', sync, { passive: true });
+  window.addEventListener('resize', sync);
+  if (prev) prev.addEventListener('click', onClick);
+  if (next) next.addEventListener('click', onClick);
+  if (mq.addEventListener) mq.addEventListener('change', setup);
+  // glide.js подключён после этого файла — лента включается, когда загружены все скрипты страницы
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', setup); else setup();
 })();

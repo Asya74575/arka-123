@@ -10,7 +10,6 @@
   var current = root.querySelector('[data-gallery-current]');
   var prev = root.querySelector('[data-gallery-dir="-1"]');
   var next = root.querySelector('[data-gallery-dir="1"]');
-  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   // ---------- Лента: бесконечная ----------
   // Перед рядом фото и после него — по копии всего ряда (без data-gallery-item, скрыты от диктора и Tab).
@@ -85,43 +84,19 @@
     }
   }
 
-  // Плавный ход к фото; aim — куда едем, пока не доехали (стрелки подряд считают от него, а не от середины пути)
-  var aim = null, aimAt = 0, touching = false, drag = null, moved = false;
-  function go(left) {
-    aim = left; aimAt = Date.now();
-    track.scrollTo({ left: left, behavior: reduce ? 'auto' : 'smooth' });
-  }
-  function step(dir) {
-    geo();
-    var x = aim !== null && Date.now() - aimAt < 1500 ? aim : track.scrollLeft;
-    var target = null;
-    for (var i = 0; i < P.length; i++) {
-      if (dir > 0 && P[i] > x + 4) { target = P[i]; break; }
-      if (dir < 0 && P[i] < x - 4) target = P[i];
+  // Ход ленты — плавная анимация glide.js (правка владельца 2026-10-20, L178): мышь, палец, колесо вбок, стрелки и клавиши
+  // двигают ленту с мягким следованием, инерцией и торможением, а не встроенной прокруткой браузера.
+  // Бесконечность: лента, ушедшая за средний ряд, встаёт на то же место в нём — кадр не меняется;
+  // на ходу — в пределах полуряда от середины, в покое — внутри среднего ряда.
+  var g = window.ARKA && window.ARKA.glide ? window.ARKA.glide(track, {
+    points: function () { geo(); return P; },
+    wrap: function (x, rest) {
+      if (!W) return 0;
+      var lo = rest ? S - 1 : S - W / 2, hi = rest ? S + W - 1 : S + W / 2;
+      return x < lo ? W : x > hi ? -W : 0;
     }
-    if (target !== null) go(target);
-  }
-  // Прокрутка остановилась: если лента ушла за средний ряд — встать на то же место в нём
-  function wrap() {
-    var x = track.scrollLeft;
-    if (x < S - 1) track.scrollLeft = x + W;
-    else if (x > S + W - 1) track.scrollLeft = x - W;
-  }
-  function settle() {
-    if (drag || touching) return;
-    if (aim !== null) {
-      if (Math.abs(track.scrollLeft - aim) > 2 && Date.now() - aimAt < 1500) return;   // ещё едем к фото
-      aim = null;
-    }
-    wrap();
-  }
-  // остановка = 140 мс без прокрутки (scrollend приходит не всегда: после плавного scrollTo в Chromium его может не быть)
-  var endTimer = 0;
-  track.addEventListener('scroll', function () { clearTimeout(endTimer); endTimer = setTimeout(settle, 140); }, { passive: true });
-  track.addEventListener('scrollend', settle);
-  track.addEventListener('touchstart', function () { touching = true; aim = null; }, { passive: true });
-  track.addEventListener('touchend', function () { touching = false; }, { passive: true });
-  track.addEventListener('touchcancel', function () { touching = false; }, { passive: true });
+  }) : null;
+  function step(dir) { if (g) g.step(dir); }
 
   if (prev) prev.addEventListener('click', function () { step(-1); });
   if (next) next.addEventListener('click', function () { step(1); });
@@ -132,8 +107,7 @@
     lastW = window.innerWidth;
     var k = nearest(track.scrollLeft) % n;      // то же фото у левого поля после смены ширины
     geo();
-    aim = null;
-    track.scrollLeft = P[n + k];
+    if (g) g.set(P[n + k]); else track.scrollLeft = P[n + k];
     progress();
   });
   track.addEventListener('keydown', function (e) {
@@ -141,39 +115,16 @@
     if (e.key === 'ArrowLeft') { e.preventDefault(); step(-1); }
   });
   geo();
-  track.scrollLeft = S;
+  if (g) g.set(S); else track.scrollLeft = S;
   progress();
 
-  // Перетаскивание мышью (палец листает ленту сам).
   // Своё перетаскивание браузера (ссылка и картинка) выключено: оно отменяло указатель без pointerup,
   // и лента «прилипала» к курсору без нажатой кнопки (правка владельца 2026-10-15)
   track.addEventListener('dragstart', function (e) { e.preventDefault(); });
   all.forEach(function (a) { a.draggable = false; Array.prototype.forEach.call(a.querySelectorAll('img'), function (img) { img.draggable = false; }); });
-  track.addEventListener('pointerdown', function (e) {
-    if (e.pointerType !== 'mouse' || e.button !== 0) return;
-    aim = null;
-    drag = { x: e.clientX, left: track.scrollLeft }; moved = false;
-  });
-  window.addEventListener('pointermove', function (e) {
-    if (!drag) return;
-    if (!(e.buttons & 1)) { endDrag(); return; }   // кнопку отпустили там, где pointerup не пришёл
-    var dx = e.clientX - drag.x;
-    if (Math.abs(dx) > 5) { moved = true; track.classList.add('is-dragging'); }
-    if (moved) track.scrollLeft = drag.left - dx;
-  });
-  window.addEventListener('pointerup', endDrag);
-  window.addEventListener('pointercancel', endDrag);
-  window.addEventListener('blur', endDrag);
-  function endDrag() {
-    if (!drag) return;
-    drag = null;
-    if (moved) {
-      track.classList.remove('is-dragging');
-      // доводка к ближайшему фото — плавно
-      geo();
-      go(P[nearest(track.scrollLeft)]);
-    }
-  }
+  // щелчок после перетаскивания фото не открывает; Enter с клавиатуры (detail = 0) — открывает всегда
+  var moved = false;
+  track.addEventListener('click', function (e) { moved = !!(e.detail && g && g.moved); }, true);
 
   // ---------- Просмотр фото с листанием ----------
   var CLOSE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5 19 19M19 5 5 19" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>';

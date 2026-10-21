@@ -87,7 +87,7 @@
   }
 
   if (!('IntersectionObserver' in window)) return;
-  var V = '20261019-b3';
+  var V = '20261021-ea2';   // знаки + / −, поворот рукой, стены при повороте (правки владельца 2026-10-21, arka-123-ea)
   var VENDOR = 'assets/vendor/three/three-map.js';   // без ?v= — тот же адрес, что у fly.js: один файл в кэше
   var FILES = ['assets/js/room3d/plan.js', 'assets/js/room3d/logic.js', 'assets/js/room3d/scene.js', 'assets/js/room3d/furniture.js',
     'assets/js/room3d/camera.js', 'assets/js/room3d/ui.js', 'assets/js/room3d/mascot.js', 'assets/js/room3d/main.js'];

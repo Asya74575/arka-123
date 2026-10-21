@@ -4,7 +4,8 @@
 // макет из белой бумаги — объёмы без текстур #f6f6f8 с тонкими серыми рёбрами, пол и земля в серо-голубых тонах
 // карты, стекло — цвет кнопки #b1cae3 (как библиотека на карте), мебель — песочным акцентом #d7c9b7 с тёмными рёбрами
 // (как дома с аркой), часы — тёмной линией; свет и мягкие тени — те же, что у карты. Стены, обращённые к зрителю,
-// срезаются до plan.cutH: часть стены выше среза — своя группа, она плавно «опускается» (scale.y → 0 за 0,6 с).
+// срезаются до plan.cutH: часть стены выше среза — своя группа, она плавно «опускается» (scale.y → 0 за 0,8 с, встаёт
+// за 1 с — updateCut).
 // R.toWorld переводит план (x, y, высота) в координаты сцены: центр модели в нуле, y плана → −Z.
 (function (w) {
   if (!w.THREE || !w.Room3D || !w.Room3D.plan) return;   // three.js не загрузился — остаётся картинка (room3d-loader.js)
@@ -226,7 +227,7 @@
   }
 
   R.buildRoom = function (scene, M, small) {
-    var recs = {}, list = [], occluders = [], n = P.floor.length, c = P.cutH;
+    var recs = {}, list = [], n = P.floor.length, c = P.cutH;
     var ground = new T.Mesh(new T.PlaneGeometry(80, 80), M.ground);
     ground.rotation.x = -Math.PI / 2; ground.position.y = -0.253; ground.receiveShadow = true; scene.add(ground);
     var slab = new T.Mesh(new T.ExtrudeGeometry(shapeOf(offsetPoly(P.floor, P.wallT)), { depth: 0.25, bevelEnabled: false }), M.slab);
@@ -247,12 +248,12 @@
     P.pilasters.forEach(function (p) { splitPlan(recs[p.wall], p.x0, p.x1, p.y0, p.y1, 0, P.height, mats[p.color], true); });
     buildClock(recs.west, M);
     var kz = P.kitchen, cb = P.cabinets;
-    occluders.push.apply(occluders, splitPlan(recs.west, kz.x0, kz.x1, kz.y0, kz.y1, 0, kz.h, M.dark, true));
+    splitPlan(recs.west, kz.x0, kz.x1, kz.y0, kz.y1, 0, kz.h, M.dark, true);
     mesh(planBox(kz.x1 - 0.004, kz.x1 + 0.004, kz.y0 + 1.1, kz.y1 - 0.05, kz.shelfH, kz.shelfH + 0.3, c), M.led, recs.west.upper);
     splitPlan(recs.west, kz.x1 - 0.004, kz.x1 + 0.006, kz.y0 + 0.2, kz.y0 + 0.8, 0.1, 0.95, M.skirting);
-    occluders.push.apply(occluders, splitPlan(recs['north-left'], cb.x0, cb.x1, cb.y0, cb.y1, 0, cb.h, M.white, true));
+    splitPlan(recs['north-left'], cb.x0, cb.x1, cb.y0, cb.y1, 0, cb.h, M.white, true);
     var cl = P.column, h2 = cl.s / 2;
-    occluders.push(mesh(planBox(cl.x - h2, cl.x + h2, cl.y - h2, cl.y + h2, 0, P.height), M.graphite, scene, true));
+    mesh(planBox(cl.x - h2, cl.x + h2, cl.y - h2, cl.y + h2, 0, P.height), M.graphite, scene, true);
     P.windows.forEach(function (win) {
       var xc = (win.x0 + win.x1) / 2, r = P.radiator;
       mesh(planBox(xc - r.w / 2, xc + r.w / 2, 0.03, 0.03 + r.depth, r.z0, r.z0 + r.h), M.radiator, scene);
@@ -269,35 +270,58 @@
 
     // Срез стен при повороте (правка владельца 2026-10-19: «при вращении помещения баг: заяц и стенка»): стена опускается
     // заранее — пока камера ещё в 1,5 м внутри её линии, а встаёт, только когда камера ушла на 2,5 м (запас, чтобы стена
-    // не дёргалась туда-обратно на границе). Если камера уже снаружи, а стена ещё не опустилась (быстрый поворот), —
-    // опускается за 0,25 с, а не за 0,6: стена, повёрнутая к зрителю внешней стороной, не закрывает зал.
-    function updateCut(cam, dt, instant) {
+    // не дёргалась туда-обратно на границе).
+    // Правка владельца 2026-10-20 («анимация резкая, быстрая, а у нас на сайте плавная, лёгкая»): стена опускается и встаёт
+    // за 0,8 с с мягким разгоном и торможением (L.smooth; было 0,6 с, а при быстром повороте — 0,25 с рывком). Чтобы
+    // успеть, стена смотрит и туда, где камера будет через 0,8 с (ahead — camera.js planAhead): перелёт, докрутка по
+    // инерции, самоповорот. Встаёт, только когда и сейчас, и через 0,8 с камера за запасом 2,5 м — и так уже 0,3 с: прогноз
+    // при перетаскивании колеблется вместе с рукой, и стена иначе начинала вставать и сразу опускалась снова; пока рука
+    // держит модель, стены только опускаются; начатое опускание доводится до конца.
+    // Правка владельца 2026-10-21 («когда крутишь помещение, все стены пропадают… надо, чтобы соответствующие стены
+    // вырастали», L192): за один оборот рукой опускались все восемь стен и стояли опущенными до отпускания. Стало: стена
+    // встаёт и пока модель держат — как только и сейчас, и по прогнозу камера за запасом 0,3 с подряд; прогноз — не по
+    // скорости руки (camera.js ahead). Опускается за 0,8 с, вырастает за 1 с — ходом Эрмита (L.herm) со скоростью, с
+    // которой стена уже шла: камера вернулась, пока стена растёт, — стена плавно разворачивается вниз, без рывка.
+    var DOWN = 0.8, RISE = 1, WAIT = 0.3;   // ход стены вниз и вверх, с; сколько стена ждёт, прежде чем встать
+    function go(r, to) {
+      var d = to ? DOWN : RISE, dx = to - r.cut, v0 = r.v || 0;
+      if (Math.abs(v0) * d > 1.5 * Math.abs(dx)) v0 = (v0 > 0 ? 1.5 : -1.5) * Math.abs(dx) / d;   // без проскока за край
+      r.tw = { x0: r.cut, v0: v0, x1: to, d: d, t: 0 };
+    }
+    // rest — где камера встанет (camera.js planRest): если там стена снова к зрителю, опущенная стена не начинает расти
+    function updateCut(cam, dt, instant, ahead, rest) {
       var busy = false;
       list.forEach(function (r) {
-        var want = L.facesViewer(r.wall, cam, P.floor, r.cut > 0.5 ? 2.5 : 1.5) ? 1 : 0;
-        if (r.cut !== want) {
-          var rate = want > r.cut && L.wallSide(r.wall, cam) > 0 && !L.inside(P.floor, cam[0], cam[1]) ? 0.25 : 0.6;
-          r.cut = instant ? want : want > r.cut ? Math.min(want, r.cut + dt / rate) : Math.max(want, r.cut - dt / 0.6);
-          busy = true;
+        var m = r.cut > 0.5 ? 2.5 : 1.5;
+        var want = L.facesViewer(r.wall, cam, P.floor, m) || (ahead && L.facesViewer(r.wall, ahead, P.floor, m)) ? 1 : 0;
+        if (instant) { r.cut = want; r.v = 0; r.tw = null; r.wait = 0; }
+        else {
+          if (r.tw && r.tw.x1 === 1) want = 1;   // начатое опускание доводится до конца (прогноз мог передумать)
+          var stay = !want && !r.tw && r.cut > 0 && rest && L.facesViewer(r.wall, rest, P.floor, m);
+          r.wait = want || stay ? 0 : (r.wait || 0) + dt;
+          var to = want ? 1 : !stay && r.wait >= WAIT ? 0 : -1, at = r.tw ? r.tw.x1 : r.cut;
+          if (to >= 0 && at !== to) go(r, to);
+          if (r.tw) {
+            var m2 = r.tw;
+            m2.t = Math.min(1, m2.t + dt / m2.d);
+            var h = L.herm(m2, m2.t);
+            r.cut = Math.max(0, Math.min(1, h.x)); r.v = h.v;
+            if (m2.t >= 1) { r.cut = m2.x1; r.v = 0; r.tw = null; }
+            busy = true;
+          } else if (!want && r.cut > 0) busy = true;   // ждёт, чтобы встать
         }
-        var k = 1 - L.easeInOut(r.cut);
+        var k = 1 - r.cut;
         r.upper.scale.y = Math.max(0.0001, k);
         r.upper.visible = k > 0.001;
       });
       return busy;
     }
-    // Стены для проверки «маскот за стеной» (main.js): непрозрачные части стен, верх — пока он не опущен. Кухня и шкафы
-    // в группах стен — не стены: за ними маскот полупрозрачный, как за мебелью (occluders)
-    var wallMeshes = [];
-    list.forEach(function (r) {
-      [r.base, r.upper].forEach(function (g) { g.traverse(function (o) { if (o.isMesh && !o.material.transparent && o.material !== M.pane && occluders.indexOf(o) < 0) wallMeshes.push({ m: o, up: g === r.upper ? r : null }); }); });
-    });
+    // Списков «стены» и «предметы» для проверки «маскот за стеной / за мебелью» больше нет (правка владельца 2026-10-20):
+    // маскот — плоскость в сцене, его закрывает буфер глубины (mascot.js)
     return {
       updateCut: updateCut,
-      busy: function () { return list.some(function (r) { return r.cut > 0 && r.cut < 1; }); },
-      wallCut: function (id) { return recs[id] ? recs[id].cut : 0; },
-      walls: function () { return wallMeshes.filter(function (w) { return !w.up || w.up.upper.visible; }).map(function (w) { return w.m; }); },
-      occluders: occluders
+      busy: function () { return list.some(function (r) { return r.tw || r.cut > 0 && r.wait > 0; }); },
+      wallCut: function (id) { return recs[id] ? recs[id].cut : 0; }
     };
   };
 

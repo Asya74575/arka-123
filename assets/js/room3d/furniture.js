@@ -1,11 +1,12 @@
 // 3D-модель зала (задание 3, drafts/room-3d.md): мебель четырёх расстановок — стулья, столы, экран на стойке, проектор,
 // флипчарт. Новая расстановка поднимается из пола и проявляется (≈1,2 с, каждый предмет ≈0,8 с, от окон вглубь),
-// прежняя опускается и гаснет за 0,5 с. Переключения подряд всегда приходят к последнему виду.
+// прежняя опускается и гаснет за 0,8 с (правка владельца 2026-10-20 «анимация резкая, быстрая»: было 0,5 с, а гасла
+// за последние 0,2 с; подъём — мягкой кривой L.smooth, без рывка посередине). Переключения подряд всегда приходят к последнему виду.
 // Облик — как у карты (scene.js): столы и стулья песочные с тёмными рёбрами, стойки и экран — белые с серыми;
 // рёбра гаснут вместе с мебелью (у линий своя прозрачность — userData.base).
 (function (w) {
   var R = w.Room3D, T = w.THREE, P = R.plan, L = R.logic;
-  var SHOW = 1.2, HIDE = 0.5, RISE = 0.35, cache = {};
+  var SHOW = 1.2, HIDE = 0.8, RISE = 0.35, cache = {};
 
   function box(sx, sy, sz, x, y, z) { var g = new T.BoxGeometry(sx, sy, sz); g.translate(x, y, z); return g; }
   // Предметы строятся «лицом» к +X: сидящий смотрит на +X, экран и флипчарт — поверхностью к +X
@@ -72,7 +73,7 @@
       views[id] = { group: group, m: m, objs: objs, meshes: meshes, vis: 0, want: 0 };
     });
     function paint(v) {
-      var a = Math.min(1, v.vis * 2.5);
+      var a = L.smooth(v.vis * 2);   // проявление — первая половина хода, гаснет — вторая
       for (var k in v.m) {
         var base = v.m[k].userData.base || 1, mat = v.m[k], tr = a * base < 0.999;
         mat.opacity = a * base;
@@ -80,7 +81,7 @@
       }
       v.objs.forEach(function (it) {
         var p = Math.max(0, Math.min(1, (v.vis - it.d * 0.35) / 0.65));
-        it.o.position.y = -RISE * (1 - L.easeInOut(p));
+        it.o.position.y = -RISE * (1 - L.smooth(p));
       });
       v.group.visible = v.vis > 0;
     }

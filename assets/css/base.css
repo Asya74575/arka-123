@@ -14,8 +14,20 @@ a { color: inherit; }
 h1, h2, h3, p { margin: 0; }
 :focus-visible { outline: 2px solid var(--accent-press); outline-offset: 3px; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
-/* Пока открыто меню или панель аренды, страница стоит */
-html.is-locked, html.is-locked body { overflow: hidden; }
+/* Пока открыто меню, панель или просмотр фото, страница стоит. Запирается только html (правка владельца 2026-10-20: «при
+   нажатии на кнопку контент карточки подпрыгивает», «во второй и третьей карточках левая сторона пустая»): overflow: hidden
+   ещё и у body делал body отдельной областью прокрутки — закреплённые экраны (sticky: слайды «Окна», «О нас», первый экран)
+   отклеивались и вставали на своё место в разметке. Ширина страницы не меняется: на место пропавшей полосы прокрутки html
+   получает отступ справа --sbw — ширину полосы (считает header.js, последний блок), панели и затемнение — от края до края. */
+html.is-locked { overflow: hidden; }
+html.is-locked, .lenis:not(.lenis-autoToggle).lenis-stopped { padding-right: var(--sbw, 0px); }
+/* Закреплённые по окну части (position: fixed) считают ширину от окна без полосы прокрутки: когда страница заперта и полоса
+   пропала, шапка становилась шире на --sbw, а её содержимое (разделы, телефон, мессенджеры, кнопка, бургер) уезжало вправо;
+   при отпирании — обратно, и панель меню или аренды, ещё уходящая за край, прыгала на ту же ширину (правка владельца
+   2026-10-21: «кнопка скачет слева/направо», «при нажатии на крестик скачок всего меню»; L191). Шапка в запертой странице
+   отступает от края на --sbw — как html; уходящие окна на время ухода (0,8 с) продолжают до края окна, под полосой. */
+html.is-locked [data-include="header"] { right: var(--sbw, 0px); }
+html:not(.is-locked) .menu.is-closing, html:not(.is-locked) .rent.is-closing { right: calc(-1 * var(--sbw, 0px)); }
 /* Переход между страницами сайта (правки владельца 2026-10-19: «„На главную“ — плавный переход без прелоадера»,
    «„Как добраться“ — ужасная прыгающая и резкая анимация… анимации должны быть одинаковыми»): уходя на другую страницу
    сайта, страница закрывается фоном арок за 0,8 с (menu.js); новая открывается под тем же фоном, встаёт на место
@@ -46,25 +58,36 @@ html.lenis, html.lenis body { height: auto; }
 /* Верхний индекс «м²» в Buyan: в шрифте нет знака ², в макете — цифра 2 верхним индексом */
 .sup { font-size: .5em; line-height: 0; vertical-align: .9em; }
 
+/* Уже 1440 (правки владельца 2026-10-20 на 1280 и 1024, arka-123-e8): значения («4 × 3,5 метра», «от 80 BYN») — 24/32
+   («тексты-подписи сейчас 32 px, сделай их 24»), вопросы — 18/24 («сейчас 20 px, сделай 18 и на брекпоинтах меньше»);
+   заголовок первого экрана на 1024–1279 — 46/52 (было 48), на планшете — 40/44. Шкала не растёт к узким экранам. */
+@media (max-width: 1439.98px) {
+  .t-value { font-size: 24px; line-height: 32px; }
+  .t-question { font-size: 18px; line-height: 24px; }
+}
+@media (min-width: 1024px) and (max-width: 1279.98px) {
+  .t-h1 { font-size: 46px; line-height: 52px; }
+}
 @media (max-width: 1023.98px) {
   .t-h1, .t-h2 { text-wrap: balance; }
-  .t-h1 { font-size: 48px; line-height: 52px; }
+  .t-h1 { font-size: 40px; line-height: 44px; }
   .t-h2 { font-size: 40px; line-height: 48px; }
-  .t-value { font-size: 32px; line-height: 40px; }
   .t-body, .t-button { font-size: 16px; line-height: 24px; }
-  .t-question { font-size: 20px; line-height: 28px; }
   .t-caption { font-size: 13px; line-height: 18px; }
   .t-intro { font-size: 32px; line-height: 40px; text-indent: 96px; }
 }
 @media (max-width: 767.98px) {
   .t-h1 { font-size: 36px; line-height: 40px; }
   .t-h2 { font-size: 32px; line-height: 36px; }
-  .t-value { font-size: 28px; line-height: 32px; }
-  .t-question { font-size: 18px; line-height: 24px; }
-  .t-intro { font-size: 28px; line-height: 32px; text-indent: 48px; }
+  /* вступление 24/28 — на ступень мельче заголовка блока (правка владельца 2026-10-21 на 767–320: «Утром здесь пишут… по размеру
+     как Н2, сделай меньше»; было 28/32 — на 320–389 равно Н2); «О нас» — то же с утра того же дня (L201); arka-123-74 */
+  .t-intro { font-size: 24px; line-height: 28px; text-indent: 40px; }
 }
-/* 320–389: связки «мы перезвоним в течение дня» (324 px при 32) шире окна 320 — заголовки блоков 28/32 */
+/* 320–389: связки «мы перезвоним в течение дня» (324 px при 32) шире окна 320 — заголовки блоков 28/32; заголовок первого
+   экрана (и 404, «Спасибо» — тот же H1) — 32/36 (правка владельца 2026-10-21: «Н1 в брекпоинтах 360–320 сделай размер 32 px,
+   сейчас 6 текстовых строк»; было 36/40 — на 360 шесть строк, на 320 семь; arka-123-de) */
 @media (max-width: 389.98px) {
+  .t-h1 { font-size: 32px; line-height: 36px; }
   .t-h2 { font-size: 28px; line-height: 32px; }
 }
 
@@ -165,6 +188,10 @@ html:not(.js) [data-include="header"] { position: absolute; }   /* без JS ш�
 .hdr { --hdr-ink: var(--ink); --hdr-soft: var(--soft); --hdr-nav: var(--ink); position: relative; display: flex; align-items: center; justify-content: space-between; height: var(--header-h); max-width: 2560px; margin-inline: auto; padding: 0 var(--gutter); color: var(--hdr-ink); }
 .hdr > * { pointer-events: auto; }
 .hdr.is-light-ui { --hdr-ink: var(--white); --hdr-soft: var(--light-soft); --hdr-nav: var(--light); }
+/* Над подвалом шапка уходит вверх за 0,8 с (header-stick.js, is-off; правка владельца 2026-10-20: «логотипы почти накладываются») */
+.hdr { transition: transform var(--dur-m) var(--ease-in-out), opacity var(--dur-m) var(--ease-in-out); }
+.hdr.is-off { transform: translateY(-100%); opacity: 0; }
+.hdr.is-off > * { pointer-events: none; }
 .hdr__logo { display: block; flex: none; }
 .hdr .logo { width: max(136px, calc(170 * var(--k))); }
 .hdr__nav { display: flex; gap: calc(32 * var(--k)); overflow: hidden; padding-block: 2px; }
@@ -215,21 +242,23 @@ html:not(.js) [data-include="header"] { position: absolute; }   /* без JS ш�
 }
 
 /* ---------- Меню (929:581) ----------
-   Затемнение 0,8 с, панель справа на половину экрана за 1,2 с (кривая Out), пункты — по буквам (motion.js).
-   До 1023.98 — панель во весь экран. Страница под меню стоит. */
+   Затемнение 0,8 с, панель справа за 1,2 с (кривая Out), пункты — по буквам (motion.js). Ширина панели: от 1024 — по
+   содержимому (ряд кнопок), 768–1023 — половина экрана, уже 768 — весь экран. Страница под меню стоит. */
 .menu { position: fixed; inset: 0; z-index: 70; visibility: hidden; pointer-events: none; }
 .menu.is-open { visibility: visible; pointer-events: auto; }
 .menu.is-closing { visibility: visible; }
 .menu__overlay { position: absolute; inset: 0; background: var(--overlay); opacity: 0; transition: opacity var(--dur-m) var(--ease-out); }
 .menu.is-open .menu__overlay { opacity: 1; }
-.menu__panel { position: absolute; top: 0; right: 0; bottom: 0; display: flex; flex-direction: column; width: max(50%, 640px); padding: calc(124 * var(--u)) var(--gutter) var(--gutter); background: var(--ink); color: var(--light); overflow-y: auto; transform: translateX(100%); transition: transform var(--dur-l) var(--ease-out); }
+.menu__panel { position: absolute; top: 0; right: 0; bottom: 0; display: flex; flex-direction: column; width: max(50%, 640px); --pt: calc(124 * var(--u)); padding: 0 var(--gutter) var(--gutter); background: var(--ink); color: var(--light); overflow-y: auto; transform: translateX(100%); transition: transform var(--dur-l) var(--ease-out); }
 .menu.is-open .menu__panel { transform: none; }
 .menu.is-closing .menu__panel { transition: transform var(--dur-m) var(--ease-in-out); }
 .menu.is-closing .menu__overlay { transition: opacity var(--dur-m) var(--ease-in-out); }
 /* Крестик — как в макете 929:581: 60 × 32, значок 16; целые пиксели на любой ширине (правка владельца 2026-10-15, L96) */
-.menu__close { position: fixed; top: calc((var(--header-h) - 32px) / 2); top: round(calc((var(--header-h) - 32px) / 2), 1px); right: var(--gutter); right: round(var(--gutter), 1px); display: grid; place-items: center; width: 60px; height: 32px; padding: 0; border: 0; background: var(--light); color: var(--ink); transition: background-color var(--dur-m) var(--ease-out); }
+/* Крестик — sticky внутри панели, как у панели аренды (L191): fixed прыгал на ширину полосы прокрутки панели, пока она выезжает и уезжает.
+   Стоит там же, где стоял (от верха окна, на --gutter от края панели: отступ даёт padding панели); места в потоке не занимает. Верхнего padding у панели нет (sticky не выходит за содержимое панели) — его роль у .menu__body. */
+.menu__close { position: sticky; flex: none; align-self: flex-end; margin-top: calc((var(--header-h) - 32px) / 2); margin-top: round(calc((var(--header-h) - 32px) / 2), 1px); margin-bottom: calc(-32px - (var(--header-h) - 32px) / 2); margin-bottom: calc(-32px - round(calc((var(--header-h) - 32px) / 2), 1px)); top: calc((var(--header-h) - 32px) / 2); top: round(calc((var(--header-h) - 32px) / 2), 1px); display: grid; place-items: center; width: 60px; height: 32px; padding: 0; border: 0; background: var(--light); color: var(--ink); transition: background-color var(--dur-m) var(--ease-out); }
 .menu__close svg { width: 16px; height: 16px; }
-.menu__body { display: flex; justify-content: space-between; gap: 32px; }
+.menu__body { display: flex; justify-content: space-between; gap: 32px; margin-top: var(--pt); }   /* верхний отступ панели — здесь: у sticky-крестика (L191) верхний край содержимого панели — её верх */
 /* Пункты — как разделы в подвале: Buyan 24/32, промежуток 12 (правка владельца 2026-10-16: «по размеру сделай как в футере»; было 72/80) */
 .menu__nav { display: grid; align-content: start; gap: calc(12 * var(--u)); }
 .menu__nav a { display: block; width: max-content; font-family: var(--font-display); font-size: max(24px, calc(24 * var(--u))); line-height: max(32px, calc(32 * var(--u))); color: var(--light); text-decoration: none; transition: color var(--dur-s) var(--ease-out); }
@@ -239,32 +268,69 @@ html:not(.js) [data-include="header"] { position: absolute; }   /* без JS ш�
    у первого значка мессенджера рисунок отступает от края квадрата на 2,7 / 32 — ряд сдвинут на столько же влево. */
 .menu__contacts { display: grid; align-content: start; gap: max(20px, calc(24 * var(--u))); width: min-content; min-width: max(220px, calc(283 * var(--u))); flex: none; }
 .menu__caption { font-size: max(13px, calc(14 * var(--u))); line-height: 1.4286; color: var(--light-soft); }
-.menu__phone { font-family: var(--font-display); font-size: max(30px, calc(40 * var(--u))); line-height: 1.2; color: var(--light); white-space: nowrap; }
+/* Телефон — кеглем пунктов меню, Buyan 24/32 (правка владельца 2026-10-20: «размер телефона сделай по размеру пунктов меню,
+   сейчас телефон сильно доминирует»; было 40 макета, не меньше 30, уже 1024 — 32/40) */
+.menu__phone { font-family: var(--font-display); font-size: max(24px, calc(24 * var(--u))); line-height: max(32px, calc(32 * var(--u))); color: var(--light); white-space: nowrap; }
 /* Почта и адрес — 18/28 на всех ширинах до 1920, выше растут с шириной (правка владельца 2026-10-18: «правую часть в меню
    уменьшить, размер текста в десктопах 18 px», L136; было 24/32 макета, на ноутбуке 20) */
 .menu__email, .menu__address { font-size: max(18px, calc(18 * var(--u))); line-height: max(28px, calc(28 * var(--u))); font-weight: 500; color: var(--light); }
-.menu__msg { --msg: max(44px, calc(48 * var(--u))); display: flex; gap: calc(12 * var(--u)); margin-left: calc(-2.7 / 32 * var(--msg)); margin-left: round(calc(-2.7 / 32 * var(--msg)), 1px); color: var(--light); }
+/* Значки мессенджеров — размером значков шапки на всех ширинах, та же формула .hdr__msg .msg (правка владельца 2026-10-20:
+   «в выпадающем меню сделай иконки размером иконок в хедере, одинаковые элементы должны быть одинакового размера»; от 1440
+   было 48 макета, не меньше 44; arka-123-cb) */
+.menu__msg { --msg: max(32px, calc(32 * var(--u))); display: flex; gap: calc(12 * var(--u)); margin-left: calc(-2.7 / 32 * var(--msg)); margin-left: round(calc(-2.7 / 32 * var(--msg)), 1px); color: var(--light); }
 .menu__msg .msg { width: var(--msg); height: var(--msg); }
 .menu__address { text-wrap: balance; }   /* в две строки поровну: без одного слова на второй строке */
 .menu__buttons { display: flex; flex-wrap: wrap; gap: calc(20 * var(--u)); margin-top: auto; padding-top: 32px; }
 .menu__buttons .btn { --k: var(--u); }   /* ширина — общее правило .btn: обе кнопки как «Арендовать помещение» (L138) */
+/* От 1024 панель — по своему содержимому, а не половина окна (правка владельца 2026-10-20: «в меню много пустого места между
+   левым и правым контекстом, уменьши это расстояние и сделай поуже меню»; было max(50%, 640px) — панель росла с окном:
+   640 на 1280, 768 на 1536, 960 на 1920, а между пунктами и «Связаться» — 220–440 px пустоты). Ширина — по ряду кнопок внизу;
+   пункты и «Связаться» — две колонки шириной кнопок, с тем же промежутком: «Связаться» стоит над «Задать вопрос».
+   Ведёт arka-123-d1 */
+@media (min-width: 1024px) {
+  .menu__panel { width: max-content; max-width: 100%; }
+  .menu__body { display: grid; grid-template-columns: 1fr 1fr; gap: calc(20 * var(--u)); }
+}
 @media (hover: hover) {
   .menu__nav a:hover { color: var(--accent); }
   .menu__close:hover { background: var(--accent); }
 }
 @media (max-width: 1023.98px) {
-  .menu__panel { width: 100%; padding: calc(var(--header-h) + 24px) var(--gutter) 32px; }
+  .menu__panel { width: 100%; --pt: calc(var(--header-h) + 24px); padding: 0 var(--gutter) 32px; }
   .menu__close { top: calc((var(--header-h) - 32px) / 2); width: 56px; height: 32px; }
   .menu__close svg { width: 16px; height: 16px; }
   .menu__nav { gap: 10px; }   /* как подвал до 1023 */
-  .menu__phone { font-size: 32px; line-height: 40px; }
   .menu__email, .menu__address { font-size: 18px; line-height: 28px; }   /* не крупнее компьютера (шкала не растёт к узким) */
-  .menu__msg { --msg: 48px; }
   .menu__buttons .btn { min-width: 260px; }
 }
 @media (max-width: 767.98px) {
   .menu__body { flex-direction: column; gap: 40px; }
   .menu__contacts { width: auto; }
+  .menu__buttons { flex-direction: column; }
+  .menu__buttons .btn { width: 100%; min-width: 0; }
+}
+/* 390–767: пункты и «Связаться» — две колонки поровну, кнопки рядом под ними: «Задать вопрос» под «Связаться» (правки владельца
+   2026-10-21 на 767: «кнопки здоровые — сделай их в два ряда, также сделай текстовый контент в два ряда»; на 480, 479 и 390:
+   «расположи текстовый контент в два ряда»; arka-123-de). Кнопка не уже «Арендовать помещение» (L138): уже ≈ 557 px окна
+   две рядом не помещаются — встают одна под другой во всю ширину, как было. Уже 390 — одной колонкой, как было. */
+@media (min-width: 390px) and (max-width: 767.98px) {
+  .menu__body { display: grid; grid-template-columns: 1fr 1fr; gap: 40px 16px; }
+  .menu__contacts { min-width: 0; }
+  .menu__buttons { flex-direction: row; column-gap: 16px; }
+  .menu__buttons .btn { flex: 1 1 0; width: auto; min-width: calc(35em / 3 + 64px); }
+}
+/* Уже 1440 значки мессенджеров в меню — как в шапке, 32 × 32 (правка владельца 2026-10-20 на 1280: «уменьши размер иконок
+   мессенджеров, сделай их как иконки в херо блоке»; было 44–48; arka-123-e8). Размер — общей формулой выше (с 2026-10-20,
+   arka-123-cb, на всех ширинах); здесь — промежуток 8, принятый на 1024–1439 */
+@media (max-width: 1439.98px) {
+  .menu__msg { gap: 8px; }
+}
+/* 768–1023: панель меню — на половину экрана, как на компьютере (правка владельца 2026-10-20 на 1023: «пересобери меню — левая
+   сторона сама по себе, правая улетела; сделай меню по ширине уже, 50/50 экрана»): пункты, под ними «Связаться», внизу
+   кнопки одна под другой во всю ширину панели; слева — затемнённая страница */
+@media (min-width: 768px) and (max-width: 1023.98px) {
+  .menu__panel { width: 50%; }
+  .menu__body { flex-wrap: wrap; gap: 40px 32px; }   /* пункты и «Связаться» рядом, пока помещаются (1023), уже — одно под другим */
   .menu__buttons { flex-direction: column; }
   .menu__buttons .btn { width: 100%; min-width: 0; }
 }
@@ -285,7 +351,11 @@ html:not(.js) [data-include="header"] { position: absolute; }   /* без JS ш�
 .rent__head { display: grid; gap: calc(16 * var(--u)); margin-bottom: calc(48 * var(--u)); }
 /* Крестик — как в макете 597:97: 59 × 32, значок 16 в 21 px от левого края (в макете 21,5); целые пиксели на любой ширине,
    не мельче на ноутбуке (правка владельца 2026-10-15, L96). Тот же крестик — у панели «Заявка на консультацию». */
-.rent__close { position: fixed; top: calc((var(--header-h) - 32px) / 2); top: round(calc((var(--header-h) - 32px) / 2), 1px); right: var(--gutter); right: round(var(--gutter), 1px); z-index: 1; display: flex; align-items: center; width: 59px; height: 32px; padding: 0 0 0 21px; border: 0; background: var(--ink); color: var(--light); transition: background-color var(--dur-m) var(--ease-out), color var(--dur-m) var(--ease-out); }
+/* Крестик — sticky внутри панели, а не fixed (правка владельца 2026-10-21: «кнопка закрытия всё так же скачет», L191): у fixed
+   внутри панели с transform (пока она выезжает и уезжает) отсчёт идёт от панели без её полосы прокрутки, а в покое (transform:
+   none) — от окна; на окне, где форма длиннее экрана, крестик прыгал на ширину полосы в конце выезда и в начале ухода.
+   Sticky считается от панели всегда; места в потоке не занимает (margin-bottom вычитает его высоту). */
+.rent__close { position: sticky; flex: none; align-self: flex-end; margin: calc((var(--header-h) - 32px) / 2) var(--gutter) calc(-32px - (var(--header-h) - 32px) / 2) 0; margin-top: round(calc((var(--header-h) - 32px) / 2), 1px); margin-right: round(var(--gutter), 1px); margin-bottom: calc(-32px - round(calc((var(--header-h) - 32px) / 2), 1px)); top: calc((var(--header-h) - 32px) / 2); top: round(calc((var(--header-h) - 32px) / 2), 1px); z-index: 1; display: flex; align-items: center; width: 59px; height: 32px; padding: 0 0 0 21px; border: 0; background: var(--ink); color: var(--light); transition: background-color var(--dur-m) var(--ease-out), color var(--dur-m) var(--ease-out); }
 .rent__close svg { width: 16px; height: 16px; }
 @media (hover: hover) { .rent__close:hover { background: var(--accent); color: var(--ink); } }
 @media (max-width: 1023.98px) {
@@ -294,7 +364,20 @@ html:not(.js) [data-include="header"] { position: absolute; }   /* без JS ш�
   .rent__close { width: 56px; padding-left: 20px; }
 }
 @media (max-width: 1023.98px) { .rent__panel { width: 100%; } }
+/* 768–1023: панели «Аренда помещения» и «Заявка на консультацию» — на половину экрана (правка владельца 2026-10-20 на 1023:
+   «сделай форму обратной связи уже по ширине, 50/50 экрана»); поля — по одному в строке */
+@media (min-width: 768px) and (max-width: 1023.98px) {
+  .rent__panel { width: 50%; }
+  .rent__inner { padding: calc(var(--header-h) + 8px) 32px 32px; }
+  .rent .form__row { grid-template-columns: 1fr; }
+}
 @media (max-width: 767.98px) { .rent__inner { padding: calc(var(--header-h) + 8px) var(--gutter) 32px; } }
+/* 480–767: панели «Аренда помещения» и «Заявка на консультацию» — 460 справа, слева затемнённая страница, как на планшете
+   (правка владельца 2026-10-21 на 767: «сделай форму компактной и уже по ширине 460 рх + некоторые поля сделай в два ряда»;
+   ответы — «панель 460 справа», рядом — «Дата + Время»; arka-123-de). Уже 480 — во весь экран, как было. */
+@media (min-width: 480px) and (max-width: 767.98px) {
+  .rent__panel { width: 460px; }
+}
 
 /* ---------- Поля формы (UI-кит 607:96) ---------- */
 .form { --k: var(--u); display: grid; gap: calc(32 * var(--k)); }
@@ -305,7 +388,7 @@ html:not(.js) [data-include="header"] { position: absolute; }   /* без JS ш�
 @media (hover: hover) { .field__box:hover { box-shadow: inset 0 0 0 1px var(--soft); } }
 .field__box:focus-within, .field.is-open .field__box, button.field__box:focus-visible { box-shadow: inset 0 0 0 1px var(--ink); outline: 0; }
 .field.is-error .field__box { box-shadow: inset 0 0 0 1px var(--error); }
-.field__input { flex: 1; min-width: 0; height: 100%; padding: 0; border: 0; outline: 0; background: transparent; color: var(--ink); caret-color: var(--ink); }
+.field__input { flex: 1; width: 0; min-width: 0; height: 100%; padding: 0; border: 0; outline: 0; background: transparent; color: var(--ink); caret-color: var(--ink); }   /* width 0: поле телефона держало свою ширину 181 px, и на 320 поля вылезали за правый край панели на 27 px (правка владельца 2026-10-21) */
 .field__input::placeholder, .field__placeholder { color: var(--soft); opacity: 1; }
 .field__input:focus::placeholder { color: transparent; transition: color .2s; }
 .field__value { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -364,6 +447,19 @@ html:not(.js) [data-include="header"] { position: absolute; }   /* без JS ш�
 .form__status:empty { display: none; }
 @media (max-width: 1023.98px) { .form { --k: .75px; } }
 @media (max-width: 767.98px) { .form__row { grid-template-columns: 1fr; } }
+/* Формы уже 768 компактнее (правка владельца 2026-10-21 на 767, arka-123-de; все формы — панели и форма внизу главной):
+   на 480–767 «Дата» и «Время» — рядом («Количество человек» и «Формат мероприятия» рядом не помещаются — по одному);
+   поле 14 по бокам и 8 до значка (при 18 и 12 «Дата мероприятия» в половине панели 460 обрезалась: нужно 210,5 из 204);
+   комментарий — на строку ниже (96 вместо 120); заголовок панели → форма 24 (было 32) */
+@media (max-width: 767.98px) {
+  .field__box { padding-inline: 14px; gap: 8px; }
+  .field--area .field__box { height: 96px; min-height: 0; }
+  .rent__head { margin-bottom: 24px; }
+  .cal { max-width: calc(100vw - 2 * var(--gutter)); }   /* на 320 календарь 336 выходил за экран, и панель листалась вбок на 32 px */
+}
+@media (min-width: 480px) and (max-width: 767.98px) {
+  .form__row:has([data-field="date"]) { grid-template-columns: 1fr 1fr; }
+}
 
 /* ---------- Подпись блока: текст — линия — текст (585:2976 и др.) ---------- */
 .mark { display: grid; justify-items: center; gap: calc(24 * var(--k)); text-align: center; font-weight: 500; font-size: max(16px, calc(18 * var(--k))); line-height: 1.5556; color: var(--muted); }
@@ -439,6 +535,109 @@ html:not(.js) [data-include="header"] { position: absolute; }   /* без JS ш�
   .site-footer__photo img { object-position: 50% 20%; }   /* рамка шире кадра: арка вверху кадра остаётся целиком (2026-10-19) */
   .site-footer__slogan { font-size: 48px; letter-spacing: 1px; }
   .site-footer__slogan span + span { padding-left: 22%; }
+}
+
+/* ---------- Подвал: правки адаптива 2026-10-20 (сессия arka-123-e8; окно владельца ≈ 1280 × 533 и 1023 × 535 при 125 %) ----------
+   Телефон — кеглем пунктов (как в меню), значки мессенджеров — как в шапке, 32 × 32 (правки владельца на 1280: «уменьши размер
+   телефона, сделай его по размеру пунктов меню + иконки уменьши, сделав их по размеру иконок в хедере»). */
+@media (max-width: 1439.98px) {
+  .site-footer__phone { font-size: 24px; line-height: 32px; }
+  .site-footer__msg { gap: 8px; }
+  .site-footer__msg .msg { width: 32px; height: 32px; min-width: 0; min-height: 0; }
+}
+/* Уже 1280 меню — одной меры с подвалом (L118): пункты и телефон 20/28, как разделы подвала, почта и адрес 16/24 — наборный
+   текст (правка владельца 2026-10-20 на 1024: «уменьши размеры текста — наборный 16»; на 1280–1439 почта и адрес — 18, L136) */
+@media (max-width: 1279.98px) {
+  .menu__nav a, .menu__phone { font-size: 20px; line-height: 28px; }
+  .menu__email, .menu__address { font-size: 16px; line-height: 24px; }
+}
+/* 1024–1439: колонки верхней части — с равными промежутками между текстами (правка владельца на 1280: «сделай одинаковые
+   отступы между текстовыми блоками, сейчас они разные»): ширина колонки — по её тексту, промежутки между колонками — равные
+   доли свободного места (не меньше 24 px); разделы и юридические ссылки — по своим колонкам через subgrid. «Режим работы…» —
+   одной строкой в колонке «Связаться» (на 1024: «сделай в одну строку»); фото и слоган — на 56 px ниже верхней части
+   («поправь отступ между верхней и нижней частями»). На 1024–1279 тексты мельче: разделы и телефон 20/28, ссылки, почта,
+   адрес 14/20 («уменьши размеры текстов»). */
+@media (min-width: 1024px) and (max-width: 1439.98px) {
+  .site-footer__in { grid-template-columns: max(160px, calc(260 * var(--k))) minmax(24px, 1fr) max-content minmax(24px, 1fr) max-content minmax(24px, 1fr) fit-content(220px) minmax(24px, 1fr) max-content; column-gap: 0; }
+  .site-footer__brand { grid-column: 1; width: auto; }
+  .site-footer__logo { width: 100%; }
+  .site-footer__nav { grid-column: 3 / 8; grid-template-columns: subgrid; column-gap: 0; }
+  .site-footer__nav .site-footer__col:nth-child(1) { grid-column: 1; }
+  .site-footer__nav .site-footer__col:nth-child(2) { grid-column: 3; }
+  .site-footer__nav .site-footer__col:nth-child(3) { grid-column: 5; }
+  .site-footer__contacts { grid-column: 9; }
+  .site-footer__contacts, .site-footer__hours { margin-left: 0; }
+  .site-footer__photo { grid-column: 1; width: 100%; height: auto; aspect-ratio: 260 / 272; margin-top: 56px; }
+  .site-footer__slogan { grid-column: 3 / -1; }
+  .site-footer__bottom { grid-template-columns: subgrid; }
+  .site-footer__copy { grid-column: 1 / 3; padding-right: 24px; }
+  .site-footer__disclaimer { grid-column: 3 / 8; }
+  .site-footer__hours { grid-column: 9; white-space: nowrap; }
+}
+@media (min-width: 1024px) and (max-width: 1279.98px) {
+  .site-footer__nav .site-footer__col:not(:last-child) a, .site-footer__phone { font-size: 20px; line-height: 28px; }
+  .site-footer__col a, .site-footer__email, .site-footer__address { font-size: 14px; line-height: 20px; }
+  .site-footer__col { gap: 10px; }
+  .site-footer__slogan { font-size: 64px; letter-spacing: 2px; }
+  /* колонка юридических ссылок уже — промежутки между колонками не меньше 48 px и на 1024 (L136) */
+  .site-footer__in { grid-template-columns: max(160px, calc(260 * var(--k))) minmax(24px, 1fr) max-content minmax(24px, 1fr) max-content minmax(24px, 1fr) fit-content(176px) minmax(24px, 1fr) max-content; }
+}
+/* 768–1023: подвал пересобран (правка владельца на 1023: «футер пересобери, сейчас всё разваливается»; было — две колонки,
+   крупное фото на полстраницы): три колонки — логотип с описанием, разделы (две колонки, под ними юридические ссылки),
+   «Связаться»; ниже — фото в первой колонке и слоган рядом; внизу — права, оговорка и режим работы по тем же колонкам */
+@media (min-width: 768px) and (max-width: 1023.98px) {
+  .site-footer__in { grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) minmax(0, 1fr); column-gap: 32px; row-gap: 40px; padding: 48px var(--gutter) 32px; }
+  .site-footer__brand { grid-column: 1; }
+  .site-footer__logo { width: min(100%, 180px); }
+  .site-footer__nav { grid-column: 2; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 16px; row-gap: 20px; }
+  .site-footer__contacts { grid-column: 3; }
+  .site-footer__nav .site-footer__col:not(:last-child) a, .site-footer__phone { font-size: 20px; line-height: 28px; }
+  .site-footer__col a, .site-footer__email, .site-footer__address { font-size: 14px; line-height: 20px; }
+  .site-footer__photo { grid-column: 1; width: 100%; aspect-ratio: 260 / 272; }
+  .site-footer__slogan { grid-column: 2 / -1; font-size: 48px; letter-spacing: 1px; }
+  .site-footer__bottom { grid-column: 1 / -1; grid-template-columns: subgrid; gap: 0 32px; align-items: start; }
+  .site-footer__copy { grid-column: 1; }
+  .site-footer__disclaimer { grid-column: 2; }
+  .site-footer__hours { grid-column: 3; }
+}
+/* Телефон: тексты подвала — как на планшете */
+@media (max-width: 767.98px) {
+  .site-footer__nav .site-footer__col:not(:last-child) a, .site-footer__phone { font-size: 20px; line-height: 28px; }
+  .site-footer__col a, .site-footer__email, .site-footer__address { font-size: 14px; line-height: 20px; }
+  .site-footer__logo { width: 180px; }
+}
+
+/* ---------- Подвал: правки адаптива 2026-10-21 (ведёт arka-123-e5) ----------
+   1024–1279: слоган — вторая строка «напротив Библиотеки» с колонки «Отзывы» (первая — с колонки «О лофте»), кегль 72 (было 64),
+   по середине фото по высоте (правка владельца на 1279–1024: «сделай по одной линии текстовый столбец (Отзывы, Как добраться,
+   Вопросы) и Встречаемся напротив библиотеки… немного больше и отцентрируй по картинке»; было — отступ 303 макета мимо колонки,
+   низ по низу фото). Строки — по колонкам разделов через subgrid, промежуток колонок — как у сетки (0). */
+@media (min-width: 1024px) and (max-width: 1279.98px) {
+  /* по видимым буквам: у «В» и «Н» кеглем 72 поле слева ≈ 2,5 px шире, чем у разделов кеглем 20, — строки левее на .035em;
+     буквы Buyan в строке 1 : 1 стоят выше середины строки — слоган ниже на .028em (середина букв = середина фото ±0,5 px) */
+  .site-footer__slogan { grid-template-columns: subgrid; column-gap: 0; align-self: center; position: relative; top: .028em; margin-top: 56px; font-size: 72px; }
+  .site-footer__slogan > span { grid-column: 1 / -1; margin-left: -.035em; }
+  .site-footer__slogan > span + span { grid-column: 3 / -1; padding-left: 0; }
+}
+/* Уже 1024 фото и слогана нет (правка владельца на 1023–768 и 767–320: «скрой фото и текст Встречаемся напротив Библиотеки») */
+@media (max-width: 1023.98px) {
+  .site-footer__photo, .site-footer__slogan { display: none; }
+}
+/* 390–767: подвал в две колонки поровну (правка владельца на 767: «пересобери данный контент, сейчас всё развалено»; было —
+   всё одним столбцом у левого края, справа пусто): логотип с описанием | «Связаться»; ниже разделы — две колонки по тем же
+   колонкам, юридические ссылки — каждая в своей колонке; права, оговорка и режим работы — строками во всю ширину.
+   Уже 390 — одним столбцом, как меню (L195): в колонке ≈ 150 px телефон и почта не помещаются. */
+@media (min-width: 390px) and (max-width: 767.98px) {
+  .site-footer__in { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 24px; }
+  .site-footer__brand { grid-column: 1; }
+  .site-footer__logo { width: min(100%, 180px); }
+  .site-footer__contacts { grid-column: 2; grid-row: 1; }
+  .site-footer__nav { grid-column: 1 / -1; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 24px; }
+  .site-footer__nav .site-footer__col:last-child { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 24px; }
+  .site-footer__nav .site-footer__col:last-child a { align-self: start; }
+  /* подвал главной не ниже окна (L191): лишняя высота — над нижней строкой, верхняя часть — кучно (промежуток 40) */
+  .site-footer__in { grid-template-rows: auto auto 1fr; }
+  .site-footer__bottom { align-self: end; }
 }
 
 /* ---------- Текстовые страницы: юридические и 404 (общая шапка и подвал) ---------- */

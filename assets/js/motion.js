@@ -180,11 +180,14 @@
     var rise = all('[data-anim="rise"]').filter(free);
     if (rise.length) window.ScrollTrigger.batch(rise, { start: 'clamp(top 85%)', once: true, onEnter: function (batch) { ARKA.reveal.rise(batch); } });
     // Надпись по дуге (ERA, circle-text): слова расходятся, пока шапка арки проходит экран; data-spread — размах в единицах рисунка
+    // при исходном кегле. Разлёт — в em: уже 1024 кегль надписи задан в px (arch.js, data-fs0 — исходный), слова расходятся в той же
+    // мере от кегля, а не на прежние единицы рисунка (2026-10-21, arka-123-74)
     all('[data-anim="arc"]').forEach(function (svg) {
       var text = svg.querySelector('text');
       if (!text || manual(svg)) return;
       var head = svg.closest('.windows__head, .ahead') || svg;
-      gsap.fromTo(text, { wordSpacing: 0 }, { wordSpacing: Number(svg.getAttribute('data-spread')) || 60, ease: 'none', scrollTrigger: { trigger: head, start: 'top bottom', end: 'bottom top', scrub: .5 } });
+      var em = (Number(svg.getAttribute('data-spread')) || 60) / (parseFloat(text.getAttribute('data-fs0') || text.getAttribute('font-size')) || 52);
+      gsap.fromTo(text, { wordSpacing: '0em' }, { wordSpacing: em + 'em', ease: 'none', scrollTrigger: { trigger: head, start: 'top bottom', end: 'bottom top', scrub: .5 } });
     });
     // data-speed — коллаж «Форматов»: карточки и кадр идут с разной скоростью (−8 %, 0, +8 % за проход блока, ERA)
     Array.prototype.forEach.call(document.querySelectorAll('[data-speed]'), function (el) {

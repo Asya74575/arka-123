@@ -22,29 +22,25 @@
 
     var scene = new T.Scene(), camera = new T.PerspectiveCamera(30, 16 / 9, 0.3, 200);
     var M = R.createMaterials(coarse), room = R.buildRoom(scene, M, coarse), furniture = R.createFurniture(scene, M), dims = R.createDims(scene);
-    var v3 = new T.Vector3(), ray = new T.Raycaster(), current = null, dirty = true, frozen = false, ui, mascot;
+    var v3 = new T.Vector3(), current = null, dirty = true, frozen = false, held = false, renders = 0, ui, mascot;
     function project(x, y, h) {
       v3.copy(R.toWorld(x, y, h)).project(camera);
       return { x: (v3.x + 1) / 2 * stage.clientWidth, y: (1 - v3.y) / 2 * stage.clientHeight, visible: v3.z < 1 && Math.abs(v3.x) < 0.92 && Math.abs(v3.y) < 0.9 };   // у края рамки точка прячется целиком, а не обрезается
     }
     var rig = R.createRig(camera, canvas, { reduced: reduced, onZoom: function (atMin, atMax) { if (ui) ui.setZoomLimits(atMin, atMax); } });
     ui = R.createUi(root, layer, { project: project, wallCut: room.wallCut, onReset: reset, onFull: toggleFull, onZoom: function (dir) { if (dir > 0) rig.zoomIn(); else rig.zoomOut(); } });
-    mascot = R.createMascot(layer, { project: project, base: opts.base || 'img/', onChange: function () { dirty = true; } });
+    // Маскот — плоскость в самой сцене с проверкой глубины (правка владельца 2026-10-20, mascot.js): стены, колонна и мебель
+    // закрывают его попиксельно, отдельной проверки «за стеной / за мебелью» больше нет
+    mascot = R.createMascot(scene, { camera: camera, canvas: canvas, base: opts.base || 'img/', reduced: reduced, solids: solids, onChange: function () { dirty = true; } });
+    // Непрозрачное в кадре — для луча наведения на маскота (подмигивает, только если навели на его видимую часть):
+    // стёкла и гаснущая мебель (непрозрачность меньше 0,6) не закрывают
+    function solids() {
+      var out = [], me = mascot && mascot.mesh;
+      scene.traverseVisible(function (o) { if (o.isMesh && o !== me && !(o.material.transparent && o.material.opacity < 0.6)) out.push(o); });
+      return out;
+    }
     // выбор расстановки — карточка внизу рамки (room3d-loader.js)
     root.addEventListener('room3d:view', function (e) { if (P.views[e.detail]) setView(e.detail, false); });
-    // Маскот полупрозрачный, если между камерой и ним колонна, кухня, шкафы или мебель; за стеной — не виден вовсе
-    // (правка владельца 2026-10-19: «при вращении — заяц и стенка»: картинка маскота лежит поверх холста и без этой
-    // проверки была видна сквозь стену, пока та поднималась или опускалась). Проверка — по голове и по поясу.
-    function occluded() {
-      var p = mascot.pos(), walls = room.walls(), item = false;
-      for (var i = 0; i < 2; i++) {
-        var to = R.toWorld(p[0], p[1], i ? P.mascotH * 0.9 : 0.6), dir = to.clone().sub(camera.position), d = dir.length();
-        ray.set(camera.position, dir.normalize()); ray.far = Math.max(0, d - 0.35);
-        if (ray.intersectObjects(walls, false).length) return 'wall';
-        if (!i) item = ray.intersectObjects(room.occluders.concat(furniture.meshes(current)), false).length > 0;
-      }
-      return item ? 'item' : false;
-    }
 
     // «На весь экран» (правка владельца 2026-10-19: «добавить кнопку открыть на весь экран»): вся рамка с карточкой
     // расстановок, подсказкой и кнопками — через Fullscreen API; где его нет для блоков (iPhone), — рамка на всё окно поверх
@@ -120,13 +116,16 @@
       if (!running) return;
       var dt = last ? Math.min(0.05, (t - last) / 1000) : 0;
       last = t;
-      var moved = !frozen && rig.update(dt);
+      var moved = !frozen && !held && rig.update(dt);
       ui.setResetOff(!!current && rig.isAt(P.views[current].camera));
-      var busy = furniture.update(dt) | dims.update(dt) | mascot.update(dt) | (!frozen && room.updateCut(rig.planPos(), dt, reduced));
+      var busy = held ? 0 : furniture.update(dt) | dims.update(dt) | mascot.update(dt) | (!frozen && room.updateCut(rig.planPos(), dt, reduced, rig.planAhead(0.8), rig.planRest()));
       if (busy || !shadowsDone) { renderer.shadowMap.needsUpdate = true; shadowsDone = !busy; }   // поворот камеры теней не меняет
       if (moved || busy || dirty) {
+        camera.updateMatrixWorld();
+        mascot.layout();   // плоскость маскота — до отрисовки, по камере этого кадра
         renderer.render(scene, camera);
-        mascot.layout(occluded()); ui.layout();
+        ui.layout();
+        renders++;
         dirty = false;
         root.classList.add('is-ready');
       }
@@ -153,6 +152,7 @@
       style: function () {
         var types = {}, maps = 0, edges = 0;
         scene.traverse(function (o) {
+          if (o === mascot.mesh) return;   // маскот — картинка позы, не облик зала
           if (o.isLineSegments) edges++;
           else if (o.isMesh) { types[o.material.type] = (types[o.material.type] || 0) + 1; if (o.material.map && o.material.map.image && o.material.map.image.width !== 512) maps++; }
         });
@@ -166,10 +166,29 @@
         R.logic.roomPoints(P).forEach(function (p) { var q = project(p[0], p[1], p[2]); b.l = Math.min(b.l, q.x); b.r = Math.max(b.r, q.x); b.t = Math.min(b.t, q.y); b.b = Math.max(b.b, q.y); });
         return b;
       },
-      // кадр для картинки-заглушки (tools/room3d/poster.mjs): самоповорот стоит, подписи и точки спрятаны
-      still: function () { rig.stopAuto(); layer.style.visibility = 'hidden'; dims.hide(); dirty = true; },
+      // Маскот в сцене (правка владельца 2026-10-20; проверка pravki-2026-10-20-room3d): рамка на экране, лучи через
+      // пиксели рамки (виден или закрыт предметом), показать или спрятать, поставить в точку плана, наведение по лучу
+      mascotBox: function () { return mascot.box(); },
+      mascotProbe: function (step) { return mascot.probe(step); },
+      mascotShow: function (on) { mascot.hide(!on); },
+      mascotHit: function (x, y) { return mascot.hit(x, y); },
+      mascotFringe: function () { return mascot.fringe(); },
+      mascotFailed: function () { return mascot.failed(); },
+      placeMascot: function (x, y, pose) { mascot.place(x, y, pose || mascot.pose()); dirty = true; },
+      // поворот и наклон камеры сразу (кадры вращений); стены опускаются и встают своим ходом, snap — сразу
+      look: function (az, el, snap) {
+        rig.stopAuto(); rig.flyTo({ az: az, el: el, uz: 1 }, 0);
+        if (snap) { rig.update(0); room.updateCut(rig.planPos(), 0, true); shadowsDone = false; }   // тени — по новым стенам
+        dirty = true;
+      },
+      // стоп-кадр: камера, стены, мебель и маскот не двигаются, кадр перерисовывается только по изменению (маскот спрятан —
+      // показан), чтобы сравнить два кадра одного мгновения
+      hold: function (on) { held = !!on; dirty = true; },
+      renders: function () { return renders; },
+      // кадр для картинки-заглушки (tools/room3d/poster.mjs): самоповорот стоит, подписи, точки и маскот спрятаны
+      still: function () { rig.stopAuto(); layer.style.visibility = 'hidden'; mascot.hide(true); dims.hide(); dirty = true; },
       setCamera: function (o) {
-        frozen = true; layer.style.visibility = 'hidden';
+        frozen = true; layer.style.visibility = 'hidden'; mascot.hide(true);
         camera.fov = o.fov; camera.clearViewOffset(); camera.updateProjectionMatrix();
         camera.position.copy(R.toWorld(o.pos[0], o.pos[1], o.pos[2])); camera.lookAt(R.toWorld(o.look[0], o.look[1], o.look[2]));
         room.updateCut([o.pos[0], o.pos[1]], 0, true); dirty = true;

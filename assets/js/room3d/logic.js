@@ -115,6 +115,18 @@
     return worst * 1.01;   // запас на повороты между шагами
   }
   function easeInOut(t) { return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
+  // Мягкий разгон и торможение (кривая Эрмита из покоя в покой): в середине скорость в 1,5 раза выше средней, а не в 3, как
+  // у easeInOut, — стены, мебель и маскот модели не «срываются» посередине хода (правка владельца 2026-10-20)
+  function smooth(t) { t = Math.max(0, Math.min(1, t)); return t * t * (3 - 2 * t); }
+  // Ход { x0, v0, x1, d } по кубической кривой Эрмита (как glide.js): положение и скорость в доле t хода длительностью d —
+  // старт со скоростью v0, с которой величина уже шла (без рывка), финиш в покое; из покоя в покой — то же, что smooth
+  function herm(m, t) {
+    var t2 = t * t, t3 = t2 * t, dx = m.x1 - m.x0;
+    return {
+      x: m.x0 + m.v0 * m.d * (t - 2 * t2 + t3) + dx * (3 * t2 - 2 * t3),
+      v: m.v0 * (1 - 4 * t + 3 * t2) + dx / m.d * (6 * t - 6 * t2)
+    };
+  }
 
   function pathLength(path) {
     var s = 0;
@@ -190,6 +202,6 @@
     area: area, inside: inside, segDist: segDist, wallDist: wallDist, inward: inward, facesViewer: facesViewer, wallSide: wallSide,
     footprint: footprint, overlap: overlap, fixedBoxes: fixedBoxes, nearestAngle: nearestAngle,
     cameraPlan: cameraPlan, roomPoints: roomPoints, frameExtent: frameExtent, fitRoom: fitRoom,
-    easeInOut: easeInOut, findPath: findPath, pathLength: pathLength, pointAt: pointAt
+    easeInOut: easeInOut, smooth: smooth, herm: herm, findPath: findPath, pathLength: pathLength, pointAt: pointAt
   };
 })(window);
