@@ -474,10 +474,14 @@
     // знак метро с плашкой меряется в строку (знак 32 + промежуток 8 + плашка), какой бы вид у него ни был в момент замера:
     // замер в виде «плашка под знаком» давал ширину одной плашки, сторона выбиралась неверно и знак уезжал с выхода из метро
     const measure = () => { sizes = LB.map((l) => { if (!l.flip) return [l.el.offsetWidth, l.el.offsetHeight]; const pl = l.el.querySelector('.fl__plate'); return [32 + 8 + pl.offsetWidth, Math.max(32, pl.offsetHeight)]; }); };
-    const keepOut = []; // прямоугольники, куда подписи не ставим (подпись остановки, панель)
+    const keepOut = []; // прямоугольники, куда подписи не ставим (подпись остановки, панель, подсказка «листайте»)
     const rectIn = (el) => { const s = stage.getBoundingClientRect(), r = el.getBoundingClientRect(); return [r.left - s.left, r.top - s.top, r.right - s.left, r.bottom - s.top]; };
     // подпись остановки — по раскладке, без сдвига анимации появления (иначе место мерится на 16 px ниже)
     const stepRect = (li) => { const ol = li.offsetParent === stage ? null : li.offsetParent; const x = (ol ? ol.offsetLeft : 0) + li.offsetLeft, y = (ol ? ol.offsetTop : 0) + li.offsetTop; return [x, y, x + li.offsetWidth, y + li.offsetHeight]; };
+    // подсказка «листайте» (телефон 320–479, map.css; правка владельца 2026-10-22): видна весь полёт до остановки «Вы пришли»
+    const hint = stage.querySelector('.fly__hint'), hintMq = matchMedia('(max-width: 479.98px)');
+    const hintOn = () => !!hint && hintMq.matches && hint.classList.contains('is-on');
+    const keep = () => { keepOut.length = 0; const s = steps[active]; if (s) keepOut.push(stepRect(s)); if (panelIn()) keepOut.push(rectIn(panel)); if (hintOn()) keepOut.push(rectIn(hint)); };
     // правый край свободной части кадра: панель «Время в пути» стоит справа весь полёт (≥1280) — подписи у её края сдвигаются
     // и переворачиваются так же, как у края сцены, а не уходят под панель
     let panelX = 0;
@@ -646,13 +650,14 @@
     function setStep(i) {
       if (i === active) return; active = i;
       steps.forEach((s, k) => s.classList.toggle('is-on', k === i));
-      requestAnimationFrame(() => { keepOut.length = 0; const s = steps[i]; if (s) keepOut.push(stepRect(s)); if (panelIn()) keepOut.push(rectIn(panel)); });
+      if (hint) hint.classList.toggle('is-on', i < steps.length - 1);
+      requestAnimationFrame(keep);
     }
     function setFinal(on) {
       if (on === isFinal) return; isFinal = on;
       section.classList.toggle('is-final', on);
       if (!on) { orbit.taz = 0; orbit.tel = 0; }
-      keepOut.length = 0; const s = steps[active]; if (s) keepOut.push(stepRect(s)); if (panelIn()) keepOut.push(rectIn(panel));
+      keep();
     }
 
     // ---------- «Карта ваша»: поворот мышью и пальцем в конце полёта ----------
@@ -673,7 +678,7 @@
       renderer.setSize(stageW, stageH, false);
       if (over) over.fit();
       measure();
-      keepOut.length = 0; const s = steps[active]; if (s) keepOut.push(stepRect(s)); if (panelIn()) keepOut.push(rectIn(panel));
+      keep();
       panelX = panelIn() ? panel.offsetLeft : 0;
     }
     new ResizeObserver(() => { fit(); if (reduced) frame(0); }).observe(view);

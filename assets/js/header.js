@@ -134,3 +134,14 @@
   window.addEventListener('load', measure);
   if (window.ResizeObserver) new ResizeObserver(measure).observe(document.body || html);   // полоса появилась, когда страница выросла
 })();
+
+// Рамка фокуса — только для клавиатуры (правка владельца 2026-10-22, iPhone: «после нажатия кнопка „Арендовать помещение“
+// имеет контур вокруг»). Safari на iPhone и Mac не ставит фокус на ссылку или кнопку от касания и щелчка, и фокус, который
+// скрипт возвращает на кнопку после закрытия панели аренды или меню (rent.js, menu.js), считает фокусом с клавиатуры —
+// рисует рамку :focus-visible у кнопки, бургера, крестика меню. После касания или щелчка html получает класс is-pointer —
+// рамки нет (base.css); первая же клавиша (Tab, Esc, Enter) класс снимает, и с клавиатуры рамка видна, как раньше.
+(function () {
+  var html = document.documentElement;
+  document.addEventListener('pointerdown', function () { html.classList.add('is-pointer'); }, true);
+  document.addEventListener('keydown', function () { html.classList.remove('is-pointer'); }, true);
+})();

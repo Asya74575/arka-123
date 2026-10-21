@@ -162,6 +162,20 @@
   .fly__btns .btn { width: 100%; }
   .loc__walk { gap: 24px 16px; }
 }
+/* Подсказка «листайте» — телефон 320–479 (правка владельца 2026-10-22, iPhone: «пользователю надо дать подсказку в виде иконки,
+   что карту надо скроллить»): белая плашка, как у подписей карты, в правом верхнем углу сцены; рука со стрелкой ходит вверх
+   за 1,6 с. Видна весь полёт до остановки «Вы пришли» (fly.js ставит is-on), подписи карты под неё не заходят (keepOut).
+   Без JS и WebGL и при «уменьшении движения» полёта нет — подсказки тоже */
+.fly__hint { display: none; }
+@media (max-width: 479.98px) {
+  .fly.is-live:not(.is-reduced) .fly__hint { position: absolute; top: 16px; right: 16px; z-index: 2; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; background: var(--white); color: var(--ink); pointer-events: none; opacity: 0; visibility: hidden; transition: opacity var(--dur-s) var(--ease-in-out), visibility 0s linear var(--dur-s); }
+  .fly.is-live.is-ready:not(.is-reduced) .fly__hint.is-on { opacity: 1; visibility: visible; transition: opacity var(--dur-m) var(--ease-out), visibility 0s; }
+}
+.fly__hint svg { width: 28px; height: 28px; fill: currentColor; overflow: visible; }
+.fly__hint-hand { transform-box: fill-box; animation: fly-hint 1.6s var(--ease-in-out) infinite; }
+.fly__hint-arrow { animation: fly-hint-arrow 1.6s var(--ease-in-out) infinite; }
+@keyframes fly-hint { 0%, 100% { transform: translateY(14%); } 50% { transform: translateY(-22%); } }
+@keyframes fly-hint-arrow { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
 
 /* ---------- Уменьшение движения: один кадр без полёта, остановки и время в пути списком ---------- */
 .fly.is-reduced .fly__track { height: auto; }
