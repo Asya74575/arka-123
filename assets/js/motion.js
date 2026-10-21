@@ -94,13 +94,15 @@
     var el = typeof target === 'string' ? document.querySelector(target) : target;
     opts = opts || {};
     if (lenis) {
+      var to = null;
       if (opts.duration == null && !opts.immediate) {
         var pad = parseFloat(getComputedStyle(html).scrollPaddingTop) || 0;
         var path = el && el.getBoundingClientRect ? el.getBoundingClientRect().top - pad : (Number(target) || 0) - lenis.animatedScroll;
         var screens = Math.abs(path) / (window.innerHeight || 1);
+        to = Math.max(0, Math.min(lenis.limit, lenis.animatedScroll + path));   // где встанет страница — для появлений (passed ниже)
         opts = Object.assign({ duration: Math.max(1.2, Math.min(2, .9 + .25 * Math.sqrt(screens))), easing: glide }, opts);
       }
-      lenis.scrollTo(el != null ? el : target, Object.assign({ duration: 1.2, offset: 0, userData: { glide: opts.easing === glide } }, opts));
+      lenis.scrollTo(el != null ? el : target, Object.assign({ duration: 1.2, offset: 0, userData: { glide: opts.easing === glide, to: to } }, opts));
     } else if (el && el.scrollIntoView) el.scrollIntoView({ behavior: 'smooth' });
   };
   // Пока страница едет к разделу, 3D-карта и 3D-модель зала не собираются (fly.js, room3d-loader.js): сборка сцены и шейдеров —
@@ -196,8 +198,22 @@
     var f = ARKA.reveal[el.getAttribute('data-anim')];
     if (typeof f === 'function') f(el, delay ? { delay: delay } : undefined);
   };
-  function once(el, play) {
-    window.ScrollTrigger.create({ trigger: el, start: 'clamp(top 85%)', once: true, onEnter: play });   // clamp: элементы в самом низу страницы тоже появляются
+  // Пройденное на лету при переходе к разделу (ARKA.scrollTo) появляется сразу, без анимации: к остановке оно уже за краем
+  // окна, а появления всех пройденных заголовков — сотни анимаций по буквам разом — занимали каждый кадр пути, и с первого
+  // экрана страница шла рывками по 300–800 px (правка владельца 2026-10-21: «в хедере херо блок осталась резкая анимация»).
+  // Анимация остаётся у того, что после остановки будет в окне.
+  function passed(el) {
+    var to = ARKA.gliding() ? lenis.userData.to : null;
+    if (to == null) return false;
+    var r = el.getBoundingClientRect(), top = r.top + lenis.animatedScroll;
+    return top > to + window.innerHeight || top + r.height < to;
+  }
+  var SHOWN = { line: { scaleY: 1, opacity: 1 }, 'line-x': { scaleX: 1, opacity: 1 } };
+  function show(el) { gsap.set(el, SHOWN[el.getAttribute('data-anim')] || { opacity: 1 }); }
+  function once(el, play, items) {
+    window.ScrollTrigger.create({ trigger: el, start: 'clamp(top 85%)', once: true, onEnter: function () {   // clamp: элементы в самом низу страницы тоже появляются
+      if (passed(el)) (items || [el]).forEach(show); else play();
+    } });
   }
   function all(sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
   function start() {
@@ -206,12 +222,15 @@
       if (manual(g)) return;
       var items = all('[data-anim]', g).filter(function (el) { return el.getAttribute('data-anim') !== 'arc' && el.closest('[data-anim-group]') === g; });
       grouped = grouped.concat(items);
-      once(g, function () { items.forEach(function (el, i) { ARKA.reveal.play(el, i * .1); }); });
+      once(g, function () { items.forEach(function (el, i) { ARKA.reveal.play(el, i * .1); }); }, items);
     });
     var free = function (el) { return !manual(el) && grouped.indexOf(el) < 0; };
     all('[data-anim="chars"], [data-anim="accent"], [data-anim="lines"], [data-anim="line"], [data-anim="line-x"]').filter(free).forEach(function (el) { once(el, function () { ARKA.reveal.play(el); }); });
     var rise = all('[data-anim="rise"]').filter(free);
-    if (rise.length) window.ScrollTrigger.batch(rise, { start: 'clamp(top 85%)', once: true, onEnter: function (batch) { ARKA.reveal.rise(batch); } });
+    if (rise.length) window.ScrollTrigger.batch(rise, { start: 'clamp(top 85%)', once: true, onEnter: function (batch) {
+      var play = batch.filter(function (el) { if (!passed(el)) return true; show(el); return false; });
+      if (play.length) ARKA.reveal.rise(play);
+    } });
     // Надпись по дуге (ERA, circle-text): слова расходятся, пока шапка арки проходит экран; data-spread — размах в единицах рисунка
     // при исходном кегле. Разлёт — в em: уже 1024 кегль надписи задан в px (arch.js, data-fs0 — исходный), слова расходятся в той же
     // мере от кегля, а не на прежние единицы рисунка (2026-10-21, arka-123-74)
