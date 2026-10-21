@@ -109,7 +109,7 @@
     if (!a || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     if (!document.querySelector('[data-intro]')) return;   // не главная
     event.preventDefault();
-    if (window.ARKA && window.ARKA.lenis) window.ARKA.lenis.scrollTo(0, { duration: 1.2 });
+    if (window.ARKA && window.ARKA.lenis) window.ARKA.scrollTo(0);   // как переход к разделу (motion.js)
     else window.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });   // «уменьшение движения» — сразу
     if (location.hash) history.replaceState(null, '', location.pathname + location.search);
   });

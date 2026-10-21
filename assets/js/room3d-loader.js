@@ -116,12 +116,22 @@
       FILES.forEach(function (f) {
         var s = document.createElement('script');
         s.src = f + '?v=' + V; s.async = false;
-        s.onload = function () { if (--left === 0 && !failed && window.Room3D && window.Room3D.init) window.Room3D.init(root); };
+        s.onload = function () {
+          if (--left > 0 || failed || !window.Room3D || !window.Room3D.init) return;
+          // пока грузились скрипты, страница поехала к разделу — модель собирается после остановки
+          if (ARKA.afterGlide) ARKA.afterGlide(function () { window.Room3D.init(root); }, root); else window.Room3D.init(root);
+        };
         s.onerror = function () { failed = true; fail(); };
         document.body.appendChild(s);
       });
     });
   }
-  var io = new IntersectionObserver(function (entries) { if (entries[entries.length - 1].isIntersecting) { io.disconnect(); load(); } }, { rootMargin: '600px 0px' });
+  // Страница едет к разделу по пункту меню — модель не собирается на лету (motion.js, ARKA.afterGlide): после остановки — снова по близости
+  var io = new IntersectionObserver(function (entries) {
+    if (!entries[entries.length - 1].isIntersecting) return;
+    io.disconnect();
+    if (ARKA.gliding && ARKA.gliding()) ARKA.afterGlide(function () { io.observe(root); }, root);
+    else load();
+  }, { rootMargin: '600px 0px' });
   io.observe(root);
 })();

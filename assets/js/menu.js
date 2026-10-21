@@ -62,7 +62,7 @@
     if (event.target.closest('[data-menu-close]')) { close(); return; }
     var link = event.target.closest('a[href]');
     if (!link || link.hasAttribute('data-rent')) { if (link) close(function () {}); return; }
-    // Ссылка на раздел этой же страницы — плавно к разделу (Lenis, 1,2 с), иначе обычный переход.
+    // Ссылка на раздел этой же страницы — плавно к разделу (ARKA.scrollTo, motion.js: 1,2–2 с по длине пути), иначе обычный переход.
     // «…/site/» и «…/site/index.html» — одна страница (правка владельца 2026-10-16: иначе главная перезагружалась с заставкой)
     var target = null;
     try {

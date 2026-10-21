@@ -84,11 +84,44 @@
     gsap.ticker.lagSmoothing(0);
     ARKA.lenis = lenis;
   }
+  // Переход к разделу (пункты меню, шапки и подвала, логотип наверх): мягкий разгон и мягкая остановка, время — от пути
+  // (правка владельца 2026-10-21: «анимация скролла до нужного блока резкая, дерганая… на плавную, лёгкую»). Кривая колеса
+  // (старт 2^(−10t)) на путь в 12–23 тыс. px пролетала половину пути за 0,1 с — по 3–4,5 тыс. px за кадр, — и потом долго
+  // доползала. Теперь — синусоида: на экран 1,2 с, на всю страницу 2 с (в середине пути — около 0,3 экрана за кадр).
+  // С заданной длительностью (шаги ленты «О лофте», hscroll.js) — прежняя кривая.
+  var glide = function (t) { return (1 - Math.cos(Math.PI * t)) / 2; };
   ARKA.scrollTo = function (target, opts) {
     var el = typeof target === 'string' ? document.querySelector(target) : target;
-    if (lenis) lenis.scrollTo(el != null ? el : target, Object.assign({ duration: 1.2, offset: 0 }, opts || {}));
-    else if (el && el.scrollIntoView) el.scrollIntoView({ behavior: 'smooth' });
+    opts = opts || {};
+    if (lenis) {
+      if (opts.duration == null && !opts.immediate) {
+        var pad = parseFloat(getComputedStyle(html).scrollPaddingTop) || 0;
+        var path = el && el.getBoundingClientRect ? el.getBoundingClientRect().top - pad : (Number(target) || 0) - lenis.animatedScroll;
+        var screens = Math.abs(path) / (window.innerHeight || 1);
+        opts = Object.assign({ duration: Math.max(1.2, Math.min(2, .9 + .25 * Math.sqrt(screens))), easing: glide }, opts);
+      }
+      lenis.scrollTo(el != null ? el : target, Object.assign({ duration: 1.2, offset: 0, userData: { glide: opts.easing === glide } }, opts));
+    } else if (el && el.scrollIntoView) el.scrollIntoView({ behavior: 'smooth' });
   };
+  // Пока страница едет к разделу, 3D-карта и 3D-модель зала не собираются (fly.js, room3d-loader.js): сборка сцены и шейдеров —
+  // 0,3–0,6 с, на столько замирал кадр, и страница перескакивала на тысячи px. После остановки (или если переход прервали
+  // колесом — Lenis тогда сбрасывает userData) они снова смотрят, близко ли блок: блок el виден хотя бы на четверть окна и
+  // не закрыт (арка «Форматов» лежит поверх 3D-модели) — сразу, иначе — когда отыграло появление раздела, к которому
+  // приехали (буквы заголовка — до 2,1 с), чтобы сборка не останавливала его.
+  ARKA.gliding = function () { return !!(lenis && lenis.isScrolling === 'smooth' && lenis.userData && lenis.userData.glide); };
+  var afterGlide = [];
+  ARKA.afterGlide = function (fn, el) { if (ARKA.gliding()) afterGlide.push([fn, el]); else fn(); };
+  function seen(el) {
+    var r = el.getBoundingClientRect(), h = window.innerHeight, top = Math.max(r.top, 0), bottom = Math.min(r.bottom, h);
+    if (bottom - top <= h / 4) return false;
+    var hit = document.elementFromPoint(Math.min(Math.max(r.left + r.width / 2, 0), window.innerWidth - 1), (top + bottom) / 2);
+    return !hit || el.contains(hit);
+  }
+  if (lenis) gsap.ticker.add(function () {
+    if (!afterGlide.length || ARKA.gliding()) return;
+    var list = afterGlide; afterGlide = [];
+    list.forEach(function (it) { if (!it[1] || seen(it[1])) it[0](); else setTimeout(it[0], 2000); });
+  });
 
   // ---------- Появления ----------
   var U = function () { return Math.min(document.body.clientWidth, 2560) / 1920; };

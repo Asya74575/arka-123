@@ -42,7 +42,15 @@
     var el = document.elementFromPoint(r.left + r.width / 2, (top + bottom) / 2);
     return !el || frame.contains(el);
   }
+  // Страница едет к разделу по пункту меню — видео не грузится и не запускается на лету (motion.js, ARKA.afterGlide): запуск
+  // ролика останавливал кадр на 0,1–0,2 с, и страница перескакивала на 1–2 тыс. px. После остановки — снова по месту блока.
+  var gliding = function () { return !!(ARKA.gliding && ARKA.gliding()); }, resync = false;
   function sync() {
+    if (gliding()) {
+      if (!video.paused) video.pause();
+      if (!resync) { resync = true; ARKA.afterGlide(function () { resync = false; sync(); }, frame); }
+      return;
+    }
     if (shown() && !userPaused) { load(); play(); }
     else if (!video.paused) video.pause();
   }
@@ -64,7 +72,11 @@
   if (toggle) toggle.addEventListener('click', flip);
 
   if ('IntersectionObserver' in window) {
-    new IntersectionObserver(function (entries) { if (entries[0].isIntersecting) load(); }, { rootMargin: '300% 0px' }).observe(frame);
+    var near = new IntersectionObserver(function (entries) {
+      if (!entries[0].isIntersecting || loaded) return;
+      if (gliding()) { near.unobserve(frame); ARKA.afterGlide(function () { near.observe(frame); }, frame); } else load();
+    }, { rootMargin: '300% 0px' });
+    near.observe(frame);
     new IntersectionObserver(function (entries) { inView = entries[0].intersectionRatio >= .5; sync(); }, { threshold: [0, .5, 1] }).observe(frame);
   } else { load(); }
 

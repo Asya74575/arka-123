@@ -100,14 +100,20 @@
     const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = fail; document.head.appendChild(s);
   });
   let started = false;
-  new IntersectionObserver((es, io) => {
+  const near = new IntersectionObserver((es, io) => {
     if (!es.some((e) => e.isIntersecting) || started) return;
+    // страница едет к разделу по пункту меню — сцена не собирается на лету (motion.js, ARKA.afterGlide): после остановки — снова по близости
+    const A = window.ARKA;
+    if (A && A.gliding && A.gliding()) { io.disconnect(); A.afterGlide(() => { if (!started) io.observe(root); }, root); return; }
     started = true; io.disconnect();
     Promise.all([load(VENDOR.href, () => window.THREE_MAP), load(new URL('map3d-data.js' + DATA_V, BASE).href, () => window.ARKA_MAP3D)]).then(() => {
       T = window.THREE_MAP; D = window.ARKA_MAP3D;
-      if (T && D) build(); else fail();
+      if (!T || !D) fail();
+      else if (A && A.afterGlide) A.afterGlide(build, root);   // пока грузились скрипты, страница поехала к разделу — сборка после остановки
+      else build();
     }).catch(fail);
-  }, { rootMargin: '200% 0px' }).observe(root);
+  }, { rootMargin: '200% 0px' });
+  near.observe(root);
   // движок не загрузился — кадр сцены картинкой и списки, как без JS
   function fail() { section.classList.remove('is-live', 'is-panel-in'); after.appendChild(panel); pinStage(); if (window.ScrollTrigger) window.ScrollTrigger.refresh(); }
 
