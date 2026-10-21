@@ -1,7 +1,8 @@
 /* Страница 404 в стиле сайта (правка владельца 2026-10-15: «сверстать страницу 404»; ответ о макете — «в стиле сайта»).
    Сюда же ведут значки мессенджеров (config.js, messengerHref), пока контакты условные. Ведёт сессия arka-123-1f.
    Композиция: слева метка «Ошибка 404», заголовок Buyan, строка и две кнопки; справа фирменная арка — окно зала
-   с Национальной библиотекой, внизу арки «404» (как «123» в арке логотипа). Фон — как у арок главной (--page).
+   с Национальной библиотекой; на полу зала — объёмные цифры «404» с тенями (запечены в фото library-window-404-*,
+   правка владельца 2026-10-22: «сделать 404 3D-шной, разместить на фото, добавить естественные тени»). Фон — как у арок главной (--page).
    Брекпоинты сайта (L88): уже 1024 — арка над текстом, по центру; уже 768 — кнопки во всю ширину.
    Появление при загрузке: текст поднимается по очереди, фото в арке отъезжает с 1,06 до 1 (1,2 с); при «уменьшении
    движения» — сразу на месте. */
@@ -23,9 +24,7 @@
 
 /* Арка: окно зала с библиотекой, верх — полукруг на всю ширину (фирменная форма, L61) */
 .nf__arch { position: relative; width: 100%; height: min(calc(100svh - var(--header-h) - 140 * var(--u)), calc(860 * var(--u))); min-height: 420px; margin: 0; overflow: hidden; border-radius: calc(320 * var(--u)) calc(320 * var(--u)) 0 0; background: var(--line); }
-.nf__arch img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 30%; }   /* окно с библиотекой из улучшенного фото «im» (2026-10-19, вечер); 30 % — в низкой рамке видна библиотека, как на «Спасибо» */
-.nf__arch::after { content: ""; position: absolute; inset: 0; background: linear-gradient(0deg, rgb(51 41 32 / .62) 0, rgb(51 41 32 / 0) 42%); pointer-events: none; }
-.nf__code { position: absolute; left: 0; right: 0; bottom: max(24px, calc(40 * var(--u))); z-index: 1; font-family: var(--font-display); font-weight: 400; font-size: max(64px, calc(96 * var(--u))); line-height: 1; text-align: center; color: var(--light); }
+.nf__arch img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 40%; }   /* окно с библиотекой из улучшенного фото «im» (2026-10-19, вечер); 40 % — в низкой рамке видны и библиотека, и цифры на полу */
 
 /* Появление при загрузке (правило 20: не за один кадр) */
 @keyframes nf-rise { from { opacity: 0; transform: translateY(calc(48 * var(--u))); } to { opacity: 1; transform: none; } }
@@ -37,8 +36,7 @@
 .nf__text > :nth-child(4) { animation-delay: .3s; }
 .nf__arch { animation: nf-fade var(--dur-m) var(--ease-out) both; }
 .nf__arch img { animation: nf-photo 1.6s var(--ease-out) both; }
-.nf__code { animation: nf-rise var(--dur-l) var(--ease-out) .4s both; }
-@media (prefers-reduced-motion: reduce) { .nf__text > *, .nf__arch, .nf__arch img, .nf__code { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .nf__text > *, .nf__arch, .nf__arch img { animation: none; } }
 
 /* ---------- Уже 1024: арка над текстом, по центру ---------- */
 @media (max-width: 1023.98px) {
