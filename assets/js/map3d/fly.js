@@ -15,7 +15,8 @@
    4) «Время в пути» стоит справа в сцене весь полёт (≥1280; уже — под сценой; правка владельца 2026-10-19, вечер: «пусть
       данная информация постоянно будет зафиксирована справа»; раньше выезжала в конце): камера ставит место остановки
       в свободную часть кадра слева (sxP), подписи карты под панель не заходят; в конце полёта карту можно покрутить
-      мышью или пальцем, «Вернуться к маршруту» возвращает ракурс.
+      мышью или пальцем; ракурс возвращается, когда прокрутка уводит из конца полёта (кнопку «Вернуться к маршруту»
+      владелец сняла 2026-10-21, вечер).
    Дома и деревья стоят сразу в полную высоту: волну роста домов от арки и полосу по земле владелец убрала
    (2026-10-15: «убери в карте волну смену формата объектов на карте»; в черновике drafts/map3d она осталась).
    Данные — map3d-data.js (OpenStreetMap, tools/map3d/build.mjs), движок — vendor/three/three-map.js (three.js r186, MIT);
@@ -37,7 +38,6 @@
   const steps = [...root.querySelectorAll('.fly__step')];
   const panel = section.querySelector('.fly__panel');
   const after = section.querySelector('.fly__after');
-  const backBtn = section.querySelector('.fly__back');
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const coarse = matchMedia('(pointer: coarse)').matches;
   const wide = matchMedia('(min-width: 1280px)');                // брекпоинты сайта (L88): панель в сцене — с 1280
@@ -357,7 +357,11 @@
       // отрезки 1 и 2 — пешком: камера смотрит на точку пути
       let walk = leg < 1 ? 0 : 1;
       if (leg === 1) { walk = WALK_MID * e; const r = routeAt(walk); cam.tx = r[0]; cam.ty = 0; cam.tz = r[1]; }
-      if (leg === 2) { walk = WALK_MID + (1 - WALK_MID) * Math.min(1, e / 0.75); const r = routeAt(walk), k = e * e * (3 - 2 * e); cam.tx = r[0] + (STOPS[3].t[0] - r[0]) * k; cam.ty = STOPS[3].t[1] * k; cam.tz = r[1] + (STOPS[3].t[2] - r[1]) * k; }
+      // к концу пути зайчик замедляется до остановки (правка владельца 2026-10-21, вечер: «маскот доходит до конечной точки
+      // и подпрыгивает… когда возвращается, вначале отскакивает, потом идёт»): ход был min(1, e/0,75) — у конца пути зайчик
+      // вставал с полного хода как вкопанный, а назад срывался сразу на полном. Теперь u + u² − u³: в начале отрезка скорость
+      // прежняя, у конца — ноль; назад он трогается с места плавно
+      if (leg === 2) { const u = Math.min(1, e / 0.75); walk = WALK_MID + (1 - WALK_MID) * (u + u * u - u * u * u); const r = routeAt(walk), k = e * e * (3 - 2 * e); cam.tx = r[0] + (STOPS[3].t[0] - r[0]) * k; cam.ty = STOPS[3].t[1] * k; cam.tz = r[1] + (STOPS[3].t[2] - r[1]) * k; }
       // зайчик выходит из метро, когда камера почти долетела до остановки «Метро» (OUT_E хода отрезка 0), и сразу идёт
       // с отрезком 1 (правка владельца 2026-10-20: раньше появлялся с половины отрезка 0 и долго ждал, пока камера летит)
       cam.walk = walk; cam.walkOn = leg >= 1 || e > OUT_E;
@@ -402,19 +406,32 @@
     // (metroLeft); при прокрутке вперёд ход только растёт.
     // Шаг и поворот — только когда зайчик правда идёт по пути (правка владельца 2026-10-19, L166): пока камера летит, он стоит
     // без подскока и не разворачивается; подскок и поворот — по ходу самого пути, лицом туда, куда идёт.
-    let walkPrev = -1, walkMovedAt = -9, walkFace = 1, walkShown = 0, walkFaced = false;
+    // Подскок — по скорости хода (правка владельца 2026-10-21, вечер: «когда маскот останавливается, то он какое-то время
+    // скачет»): раньше он подпрыгивал, пока ход менялся хоть на 1e-5 за кадр, а ход за прокруткой дотягивается плавно ещё 2–3 с —
+    // зайчик полз и скакал на месте. Теперь высота подскока идёт за сглаженной скоростью по пути: медленнее HOP_V0 м/с — стоит
+    // на земле, с HOP_V1 — полный подскок 3 px; подскок начинается с земли, а когда зайчик встаёт — плавно гаснет.
+    const HOP_V0 = 12, HOP_V1 = 30;
+    let walkPrev = -1, walkT = -1, walkFace = 1, walkShown = 0, walkFaced = false, hopV = 0, hopA = 0, hopPh = 0;
     function walkerAt() {
       const w = cam.walk, r = routeAt(w), s = bunnyScale(walkerEl, r[0], r[1]);
       walkShown = w;
       const step = walkPrev < 0 ? 0 : w - walkPrev, going = Math.abs(step) > 1e-5;
-      walkPrev = w;
+      const dt = walkT < 0 ? 0 : Math.min(0.05, Math.max(0, breathT - walkT));
+      walkPrev = w; walkT = breathT;
       if (going || !walkFaced) {
         const n = routeAt(Math.min(1, w + 0.01));
         const a = toScreen(r[0], 1, r[1]), b = toScreen(n[0], 1, n[1]), dx = (b[0] - a[0]) * (step < 0 ? -1 : 1), dy = b[1] - a[1];
         if (Math.abs(dx) > 0.5 && Math.abs(dx) > Math.abs(dy) * 0.25) { walkFace = dx < 0 ? -1 : 1; walkFaced = true; }   // почти вертикальный ход — прежний поворот
       }
-      if (going) walkMovedAt = breathT;
-      const hop = !reduced && breathT - walkMovedAt < 0.15 ? -Math.abs(Math.sin(breathT * 9)) * 3 : 0;
+      if (dt > 0) {
+        hopV = damp(hopV, Math.abs(step) * RLEN / dt, 12, dt);
+        if (hopA < 0.02) hopPh = 0;   // стоял — следующий подскок с земли
+        // дошёл до конца пути (сменяет позу на «привет») или ещё не вышел из метро — приземляется сразу, за 0,1 с
+        const land = w >= 0.9999 || !cam.walkOn;
+        hopA = damp(hopA, reduced || land ? 0 : 3 * clamp01((hopV - HOP_V0) / (HOP_V1 - HOP_V0)), land ? 30 : 10, dt);
+        hopPh += dt * 9;
+      }
+      const hop = -Math.abs(Math.sin(hopPh)) * hopA;
       hopEl.style.transform = `translateY(${hop.toFixed(1)}px) scale(${s.toFixed(3)})`;
       faceEl.style.transform = `scaleX(${walkFace})`;
       if (!over) walkerEl.classList.toggle('is-behind', !seen(r[0], r[1]));   // второго холста нет — прежний вид: за домом полупрозрачный
@@ -502,7 +519,11 @@
         const m = 16;
         let ok = p[2] < 1 && (!l.when || l.when()) && box[0] > m && box[2] < RW - m && box[1] > m && box[3] < stageH - m;
         if (ok && !l.free && taken.some((o) => box[0] < o[2] && box[2] > o[0] && box[1] < o[3] && box[3] > o[1])) ok = false;
-        if (ok) { if (!l.free) taken.push(box); l.el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`; }
+        if (ok && !l.free) taken.push(box);
+        // гаснущий зайчик едет вместе со сценой (правка владельца 2026-10-21, вечер: «маскот доходит до конечной точки и
+        // подпрыгивает»): раньше скрытая подпись стояла, где её застало, — шагающий гас на месте, а «привет» проявлялся на 8 px
+        // ниже и уезжал с камерой ещё на 30 px; две позы расходились, и смена позы выглядела прыжком
+        if (ok || (l.bunny && p[2] < 1)) l.el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
         l.el.classList.toggle('is-off', !ok);
         if (l.flip) { l.el.classList.toggle('is-flip', flip); l.el.classList.toggle('is-stack', stack); }
       });
@@ -624,7 +645,7 @@
     function setFinal(on) {
       if (on === isFinal) return; isFinal = on;
       section.classList.toggle('is-final', on);
-      if (!on) { orbit.taz = 0; orbit.tel = 0; backBtn.hidden = true; }
+      if (!on) { orbit.taz = 0; orbit.tel = 0; }
       keepOut.length = 0; const s = steps[active]; if (s) keepOut.push(stepRect(s)); if (panelIn()) keepOut.push(rectIn(panel));
     }
 
@@ -635,11 +656,9 @@
       if (!drag || e.pointerId !== drag.id) return;
       const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY;
       orbit.taz -= dx * 0.22; orbit.tel = Math.min(30, Math.max(-24, orbit.tel + dy * 0.12));
-      if (Math.abs(orbit.taz) > 3 || Math.abs(orbit.tel) > 3) backBtn.hidden = false;
     });
     const endDrag = () => { drag = null; section.classList.remove('is-dragging'); };
     view.addEventListener('pointerup', endDrag); view.addEventListener('pointercancel', endDrag);
-    backBtn.addEventListener('click', () => { orbit.taz = 0; orbit.tel = 0; backBtn.hidden = true; });
 
     // ---------- Размер ----------
     function fit() {

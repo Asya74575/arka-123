@@ -19,11 +19,10 @@
 .fly__h { margin: 0 0 12px; font-family: var(--font-display); font-weight: 400; font-size: max(28px, calc(40 * var(--u))); line-height: 1.2; color: var(--ink); }
 .fly__p { margin: 0; color: var(--muted); }
 .fly__btns { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 24px; }
-.fly__back { background: var(--white); color: var(--ink); box-shadow: inset 0 0 0 1px var(--line); }
-.fly__back[hidden] { display: none; }
 .fly__osm { display: none; }
-/* остановка «Листайте — пройдём…» — только в полёте. Кнопки «Перейти в карту» и «Вернуться к маршруту» — у последней остановки
-   «Вы пришли» (с 2026-10-19, вечер: полёт кончается на ней; остановка «Покрутите карту» снята) */
+/* остановка «Листайте — пройдём…» — только в полёте. Кнопка «Перейти в карту» — у последней остановки «Вы пришли»
+   (с 2026-10-19, вечер: полёт кончается на ней; остановка «Покрутите карту» снята; кнопку «Вернуться к маршруту» владелец
+   сняла 2026-10-21, вечер) */
 .fly:not(.is-live) .fly__step--intro, .fly.is-reduced .fly__step--intro { display: none; }
 
 /* ---------- Панель «Время в пути»: под сценой (уже 1280, без JS, «уменьшение движения») ---------- */
@@ -70,15 +69,21 @@
 
 /* панель в сцене (≥1280): стоит справа весь полёт, как панель макета поверх карты (правка владельца 2026-10-19, вечер:
    «пусть данная информация постоянно будет зафиксирована справа»; раньше выезжала в конце полёта). Подпись данных OSM —
-   в самой панели, у сцены её нет */
-.fly.is-panel-in .fly__stage > .fly__panel { position: absolute; top: 0; right: 0; bottom: 0; z-index: 2; width: calc(704 * var(--u)); margin: 0; padding: calc(80 * var(--u)) calc(60 * var(--u)) 0 calc(118 * var(--u)); background: linear-gradient(90deg, rgb(225 227 233 / 0) 0, var(--page) calc(118 * var(--u))); }
+   в самой панели, у сцены её нет.
+   Списки — посередине сцены по высоте (правка владельца 2026-10-21, вечер: «правую часть текстового контента отцентрируй»;
+   раньше стояли сверху, а под ними до подписи OSM оставалась пустая треть). Поровну делят только свободное место: margin auto
+   над «Пешком» и под «На машине» — когда места нет, список прижат к верху, как раньше, а не срезан сверху. Нижний отступ
+   панели — с запасом под подпись OSM, она стоит у низа сцены */
+.fly.is-panel-in .fly__stage > .fly__panel { position: absolute; top: 0; right: 0; bottom: 0; z-index: 2; display: flex; flex-direction: column; width: calc(704 * var(--u)); margin: 0; padding: calc(80 * var(--u)) calc(60 * var(--u)) calc(80 * var(--u)) calc(118 * var(--u)); background: linear-gradient(90deg, rgb(225 227 233 / 0) 0, var(--page) calc(118 * var(--u))); }
+.fly.is-panel-in .fly__stage > .fly__panel > :first-child { margin-top: auto; }
+.fly.is-panel-in .fly__stage > .fly__panel .loc__car { margin-bottom: auto; }
 .fly.is-live.is-panel-in .fly__osm { display: none; }
 .fly.is-panel-in .fly__stage > .fly__panel .loc__cap { margin-bottom: calc(24 * var(--u)); }
 .fly.is-panel-in .fly__stage > .fly__panel .loc__cap--car { margin-top: calc(48 * var(--u)); }
 .fly.is-panel-in .fly__stage > .fly__panel .loc__osm { position: absolute; left: calc(118 * var(--u)); bottom: calc(40 * var(--u)); margin: 0; }
 /* низкое окно (ноутбук при 125 %): панель плотнее, чтобы поместилась по высоте */
 @media (max-height: 820px) {
-  .fly.is-panel-in .fly__stage > .fly__panel { padding-top: 24px; }
+  .fly.is-panel-in .fly__stage > .fly__panel { padding-top: 44px; padding-bottom: 44px; }   /* снизу — подпись OSM (16 + строка), сверху столько же — список посередине */
   .fly.is-panel-in .fly__stage > .fly__panel .loc__cap { margin-bottom: 12px; }
   .fly.is-panel-in .fly__stage > .fly__panel .loc__cap--car { margin-top: 20px; }
   .fly.is-panel-in .fly__stage > .fly__panel .loc__walk { gap: 16px 32px; }
@@ -94,7 +99,7 @@
    «Аэропорт Минск» за краем сцены, подпись OSM поверх строки «Железнодорожный вокзал»; arka-123-7a): панель плотнее, подпись —
    строкой под списком. Весь список в сцене от 1280 при окне от ≈ 465 px (tools/checks/pravki-2026-10-20-low.mjs) */
 @media (max-height: 640px) {
-  .fly.is-panel-in .fly__stage > .fly__panel { padding-top: 16px; }
+  .fly.is-panel-in .fly__stage > .fly__panel { padding-top: 16px; padding-bottom: 16px; }
   .fly.is-panel-in .fly__stage > .fly__panel .loc__cap { margin-bottom: 8px; }
   .fly.is-panel-in .fly__stage > .fly__panel .loc__cap--car { margin-top: 12px; }
   .fly.is-panel-in .fly__stage > .fly__panel .loc__walk { gap: 8px 32px; }
@@ -106,7 +111,7 @@
   .fly.is-panel-in .fly__stage > .fly__panel .loc__osm { position: static; margin-top: 8px; }
 }
 @media (max-height: 540px) {
-  .fly.is-panel-in .fly__stage > .fly__panel { padding-top: 12px; }
+  .fly.is-panel-in .fly__stage > .fly__panel { padding-top: 12px; padding-bottom: 12px; }
   .fly.is-panel-in .fly__stage > .fly__panel .loc__car li { height: 32px; }
 }
 .fly.is-live.is-final:not(.is-reduced) .fly__view { cursor: grab; }
@@ -138,7 +143,10 @@
 .fl--walker { transition: opacity var(--dur-m) var(--ease-out); }
 .fl--walker .fl__bunny { transition: transform .4s var(--ease-in-out), translate var(--dur-m) var(--ease-out); }
 .fl--walker.is-off:not(.is-end) .fl__bunny { translate: 0 40%; }
-/* у конца пути шагающий гаснет на месте, а «привет» проявляется там же (правка владельца 2026-10-21: «маскот отходит в сторону») */
+/* у конца пути шагающий гаснет на месте, а «привет» проявляется там же (правка владельца 2026-10-21: «маскот отходит в сторону»).
+   Смена позы — встречным проявлением одной длительности (вечер того же дня: «доходит до конечной точки и подпрыгивает»):
+   шагающий гас 0,8 с, а «привет» проявлялся за 0,4 — полсекунды стояли две позы разом */
+.fl--walker.is-end { transition: opacity var(--dur-s) var(--ease-in-out); }
 .fl--end .fl__bunny { aspect-ratio: 843 / 1477; }
 
 /* ---------- Уже 1024: подпись остановки снизу во всю ширину, камера отходит (fly.js) ---------- */
@@ -163,7 +171,7 @@
 .fly.is-reduced .fly__steps { position: static; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 32px 40px; width: auto; padding: var(--fly-pad); pointer-events: auto; }
 .fly.is-reduced .fly__step { grid-area: auto; opacity: 1; visibility: visible; transform: none; transition: none; }
 .fly.is-reduced .fly__osm { display: none; }
-@media (prefers-reduced-motion: reduce) { .fl, .fl__bunny, .fl--walker, .fl--walker .fl__bunny { transition: none; animation: none; } }
+@media (prefers-reduced-motion: reduce) { .fl, .fl__bunny, .fl--walker, .fl--walker.is-end, .fl--walker .fl__bunny { transition: none; animation: none; } }
 
 /* ---------- Правки адаптива 2026-10-20 (сессия arka-123-e8; окно владельца ≈ 1280 × 533 и 1023 × 535 при 125 %) ---------- */
 /* «Пешком»: время и подпись у всех четырёх мест — с верха ячейки (правка владельца на 1280: «тексты „метро «Восток»“ и
