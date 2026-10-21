@@ -54,3 +54,7 @@
   .nf__arch { width: min(100%, 320px); height: min(400px, 40svh); border-radius: 160px 160px 0 0; }
   .nf__btns { grid-auto-flow: row; width: 100%; }
 }
+/* 320–479: кнопки по 320 по центру, как все кнопки телефона (base.css, правка владельца 2026-10-22) — ширина арки */
+@media (max-width: 479.98px) {
+  .nf__btns { width: min(100%, 320px); }
+}
