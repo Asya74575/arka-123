@@ -507,9 +507,13 @@ html:not(.js) .faq__a { grid-template-rows: 1fr; }
 .rent-block { position: relative; z-index: 2; padding: 0 var(--gutter) calc(134 * var(--u)); }
 /* Подвал главной — не ниже окна (правка владельца 2026-10-21: «сделать футер на всю ширину экрана, голубая полоска сверху
    только портит»; выбор — «подвал на весь экран»): страница докручена до конца — виден один подвал, голубой нижний отступ блока
-   формы над ним не показывается. Низкое окно — подвал выше окна, как был. Строки подвала расходятся по высоте поровну. */
-body:has(.rent-block) .site-footer { display: flex; flex-direction: column; min-height: 100svh; }
-body:has(.rent-block) .site-footer__in { flex: 1 1 auto; width: 100%; align-content: space-between; }
+   формы над ним не показывается. Низкое окно — подвал выше окна, как был. Строки подвала расходятся по высоте поровну.
+   Только шире 960 (правка владельца 2026-10-21 на 960–320: «убери много пустого пространства… футер на весь экран только
+   в 1920–961»): уже — подвал по содержимому. */
+@media (min-width: 961px) {
+  body:has(.rent-block) .site-footer { display: flex; flex-direction: column; min-height: 100svh; }
+  body:has(.rent-block) .site-footer__in { flex: 1 1 auto; width: 100%; align-content: space-between; }
+}
 .rent-block .ahead { margin-inline: calc(-1 * var(--gutter)); }   /* шапка арки — во всю ширину, как сам круг */
 .rent-block__form { position: relative; z-index: 1; width: calc(800 * var(--u)); min-width: min(560px, 100%); margin: 0 auto; }
 .rent-block .form [type="submit"] { justify-self: start; width: auto; min-width: calc(290 * var(--u)); }
